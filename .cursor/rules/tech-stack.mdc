@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Android part decsription:
+This Android application offers a sophisticated and user-friendly interface, leveraging modern design principles for optimal usability. On the first page, users can easily start and stop recording meeting audio with a single button tap. Additionally, there’s a dedicated page where users can view transcriptions of their recorded meetings, complete with a summary and key points such as main questions and discussion topics. Finally, the page includes an actionable plan outlining next steps for the team based on the meeting’s outcomes.
+
+
+use ksp plugin
+
+tehnical stack 
+- kotlin
+- android compose
+- android compose navigation
+- view model 
+- MVVM
+- hilt as DI
+- room
+- retrofit2
+- firebase crashlitics

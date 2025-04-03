@@ -1,0 +1,52 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Common descriptio
+## Project Description
+
+### AI-powered Meeting Assistant App for Android
+
+The project is an innovative Android application designed to transform traditional meeting protocols into efficient, structured, and actionable reports through advanced AI technologies.
+
+### Key Features
+
+#### 1. Audio Recording
+- Automatically captures meeting audio via the device microphone.
+- Customizable settings including duration, sampling rate (16 kHz), and noise suppression.
+
+#### 2. Speech-to-Text Conversion with Timestamps
+- Accurate speech-to-text transcription with precise timestamps (e.g., 00:05:23).
+- Multilingual support using Whisper and Vosk models.
+
+#### 3. Structured Data Extraction
+- Identifies and categorizes crucial meeting content:
+  - Decisions made (including deadlines and responsible parties).
+  - Problems and potential risks.
+  - Alternative concepts and hypotheses.
+  - Action items and next steps.
+
+#### 4. Data Visualization
+- Creates interactive tables detailing tasks, assignees, and deadlines.
+- Graphs include:
+  - Gantt charts to visualize project timelines.
+  - Pie/bar charts depicting resource allocation.
+
+#### 5. Interactive Reports
+- Exports reports in HTML, PDF, and Markdown formats.
+- Features include:
+  - Clickable timestamps linking directly to audio segments.
+  - Dynamic, filterable charts.
+  - Exportable tables to Excel/CSV.
+
+### Advantages
+- **Time Savings:** Automates routine tasks, reducing protocol drafting time by up to 70%.
+- **Accuracy:** Significantly minimizes human error in capturing decisions.
+- **Clarity:** Produces interactive and visually clear reports instead of extensive text documents.
+- **Privacy:** Ensures data confidentiality with no third-party involvement.
+
+This AI-powered system transforms meetings from chaotic discussions into structured, insightful, and actionable documents directly from your mobile device.
+
+
+
