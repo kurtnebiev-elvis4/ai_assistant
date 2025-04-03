@@ -7,7 +7,8 @@ model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 
-def summarize_transcript(transcript_path="transcripts/latest_transcript.txt") -> str:
+
+def summarize_transcript(file_id: str, transcript_path: str) -> str:
     """Generates a summary from a meeting transcript file."""
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
@@ -20,11 +21,12 @@ def summarize_transcript(transcript_path="transcripts/latest_transcript.txt") ->
     input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(device)
     outputs = model.generate(input_ids)
     summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    with open(transcript_path + "_summary.txt", "w", encoding="utf-8") as out:
+    with open(file_id + "_summary.txt", "w", encoding="utf-8") as out:
         out.write(summary)
     return summary
 
-def extract_decisions_from_transcript(transcript_path="transcripts/latest_transcript.txt") -> list:
+
+def extract_decisions_from_transcript(file_id: str, transcript_path: str) -> list:
     """Extracts decisions made during a meeting from a transcript file."""
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
@@ -38,11 +40,12 @@ def extract_decisions_from_transcript(transcript_path="transcripts/latest_transc
     outputs = model.generate(input_ids, max_new_tokens=200)
     decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     decisions = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]
-    with open(transcript_path + "_decisions.txt", "w", encoding="utf-8") as out:
+    with open(file_id + "_decisions.txt", "w", encoding="utf-8") as out:
         out.write("\n".join(decisions))
     return decisions
 
-def extract_tasks_from_transcript(transcript_path="transcripts/latest_transcript.txt") -> list:
+
+def extract_tasks_from_transcript(file_id: str, transcript_path: str) -> list:
     """Extracts action items or tasks discussed in the meeting."""
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
@@ -56,6 +59,6 @@ def extract_tasks_from_transcript(transcript_path="transcripts/latest_transcript
     outputs = model.generate(input_ids, max_new_tokens=200)
     decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     tasks = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]
-    with open(transcript_path + "_tasks.txt", "w", encoding="utf-8") as out:
+    with open(file_id + "_tasks.txt", "w", encoding="utf-8") as out:
         out.write("\n".join(tasks))
     return tasks

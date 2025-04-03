@@ -4,13 +4,15 @@ import os
 import uuid
 import asyncio
 import soundfile as sf
-from assistant_background import run_full_analysis_pipeline, RESULT_TYPES
+from assistant_background import run_full_analysis_pipeline, RESULT_TYPES, allowed_extensions
 
 app = FastAPI()
+
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
 
 # Временная папка для хранения файлов
 UPLOAD_DIR = "uploads"
@@ -23,9 +25,8 @@ async def upload_audio(file: UploadFile = File(...), background_tasks: Backgroun
     file_id = str(uuid.uuid4())
     file_extension = os.path.splitext(file.filename)[1]
 
-    allowed_extensions = {".wav", ".mp3", ".flac"}
     if file_extension.lower() not in allowed_extensions:
-        raise HTTPException(status_code=400, detail="Unsupported file format. Allowed formats: wav, mp3, flac")
+        raise HTTPException(status_code=400, detail=f"Unsupported file format. Allowed formats: {allowed_extensions}")
 
     input_filename = f"{file_id}{file_extension}"
     input_filepath = os.path.join(UPLOAD_DIR, input_filename)
@@ -49,6 +50,7 @@ async def upload_audio(file: UploadFile = File(...), background_tasks: Backgroun
     # Возвращаем идентификатор файла для последующего скачивания результата
     return {"message": "Файл получен и обрабатывается", "file_id": file_id}
 
+
 @app.get("/download/{file_id}")
 async def download_result(file_id: str, type: str = "transcript"):
     if type not in RESULT_TYPES:
@@ -63,6 +65,7 @@ async def download_result(file_id: str, type: str = "transcript"):
     filename = f"{type}.txt" if type != "transcript" else "transcription.txt"
     return FileResponse(path=file_path, media_type="text/plain", filename=filename)
 
+
 @app.get("/status/{file_id}")
 async def get_status(file_id: str):
     result_types = list(RESULT_TYPES.keys())
@@ -75,6 +78,7 @@ async def get_status(file_id: str):
     status["ready"] = all(status[result_type] for result_type in result_types)
 
     return status
+
 
 @app.get("/types")
 async def get_available_result_types():
