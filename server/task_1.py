@@ -1,8 +1,11 @@
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from langdetect import detect
+import torch
 
 tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
 model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = model.to(device)
 
 def summarize_transcript(transcript_path="transcripts/latest_transcript.txt") -> str:
     """Generates a summary from a meeting transcript file."""
@@ -14,7 +17,7 @@ def summarize_transcript(transcript_path="transcripts/latest_transcript.txt") ->
     else:
         prompt = "Summarize this meeting: "
     input_text = prompt + whisper_text
-    input_ids = tokenizer(input_text, return_tensors="pt").input_ids
+    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(device)
     outputs = model.generate(input_ids)
     summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
     with open(transcript_path + "_summary.txt", "w", encoding="utf-8") as out:
@@ -31,7 +34,7 @@ def extract_decisions_from_transcript(transcript_path="transcripts/latest_transc
     else:
         prompt = "List all decisions made in the following meeting:\n"
     input_text = prompt + whisper_text
-    input_ids = tokenizer(input_text, return_tensors="pt").input_ids
+    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(device)
     outputs = model.generate(input_ids, max_new_tokens=200)
     decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     decisions = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]
@@ -49,7 +52,7 @@ def extract_tasks_from_transcript(transcript_path="transcripts/latest_transcript
     else:
         prompt = "List all action items and tasks discussed in this meeting:\n"
     input_text = prompt + whisper_text
-    input_ids = tokenizer(input_text, return_tensors="pt").input_ids
+    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(device)
     outputs = model.generate(input_ids, max_new_tokens=200)
     decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     tasks = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]

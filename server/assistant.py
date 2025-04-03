@@ -4,8 +4,7 @@ import os
 import uuid
 import asyncio
 import soundfile as sf
-from nlp_tasks import summarize_transcript, extract_decisions_from_transcript, extract_tasks_from_transcript
-from transcription import transcribe_audio
+from assistant_background import run_full_analysis_pipeline, RESULT_TYPES
 
 app = FastAPI()
 

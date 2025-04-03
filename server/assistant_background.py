@@ -1,5 +1,5 @@
-from transcription import transcribe_audio
-from nlp_tasks import summarize_transcript, extract_decisions_from_transcript, extract_tasks_from_transcript
+from task_0 import transcribe_audio
+from task_1 import summarize_transcript, extract_decisions_from_transcript, extract_tasks_from_transcript
 import os
 
 UPLOAD_DIR = "uploads"
