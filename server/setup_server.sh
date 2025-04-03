@@ -7,8 +7,8 @@ mkdir -p /app
 cd /app
 
 echo "📦 Обновляем систему и устанавливаем зависимости"
-sudo apt-get update && sudo apt-get upgrade -y
-sudo apt-get install -y ffmpeg curl python3 python3-pip
+apt-get update && apt-get upgrade -y
+apt-get install -y ffmpeg curl python3 python3-pip
 
 echo "🐍 Устанавливаем зависимости Python"
 # Если у тебя есть requirements.txt — скопируй его в /app перед этим скриптом
