@@ -19,5 +19,7 @@ echo "📦 Устанавливаем FastAPI и Uvicorn (на всякий сл
 pip3 install fastapi uvicorn
 
 echo "✅ Установка завершена"
+echo "🌍 Внешний IP сервера:"
+curl ifconfig.me
 echo "📡 Запустить сервер можно командой:"
 echo "uvicorn assistant:app --host 0.0.0.0 --port 8000 --reload"
