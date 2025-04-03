@@ -1,6 +1,9 @@
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from langdetect import detect
 import torch
+import os
+
+UPLOAD_DIR = "uploads"
 
 tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
 model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
@@ -21,7 +24,8 @@ def summarize_transcript(file_id: str, transcript_path: str) -> str:
     input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(device)
     outputs = model.generate(input_ids)
     summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    with open(file_id + "_summary.txt", "w", encoding="utf-8") as out:
+    output_path = os.path.join(UPLOAD_DIR, f"{file_id}_summary.txt")
+    with open(output_path, "w", encoding="utf-8") as out:
         out.write(summary)
     return summary
 
@@ -40,7 +44,8 @@ def extract_decisions_from_transcript(file_id: str, transcript_path: str) -> lis
     outputs = model.generate(input_ids, max_new_tokens=200)
     decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     decisions = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]
-    with open(file_id + "_decisions.txt", "w", encoding="utf-8") as out:
+    output_path = os.path.join(UPLOAD_DIR, f"{file_id}_decisions.txt")
+    with open(output_path, "w", encoding="utf-8") as out:
         out.write("\n".join(decisions))
     return decisions
 
@@ -59,6 +64,7 @@ def extract_tasks_from_transcript(file_id: str, transcript_path: str) -> list:
     outputs = model.generate(input_ids, max_new_tokens=200)
     decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     tasks = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]
-    with open(file_id + "_tasks.txt", "w", encoding="utf-8") as out:
+    output_path = os.path.join(UPLOAD_DIR, f"{file_id}_tasks.txt")
+    with open(output_path, "w", encoding="utf-8") as out:
         out.write("\n".join(tasks))
     return tasks
