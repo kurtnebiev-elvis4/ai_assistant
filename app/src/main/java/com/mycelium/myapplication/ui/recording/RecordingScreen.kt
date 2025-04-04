@@ -1,6 +1,7 @@
 package com.mycelium.myapplication.ui.recording
 
 import android.os.Build
+import android.util.Half.abs
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
@@ -48,6 +50,14 @@ interface RecordingScreenCallback {
     fun stopRecording()
     fun startRecording()
     fun deleteRecording(session: RecordingSession)
+}
+
+fun movingAverage(data: List<Short>, windowSize: Int = 5): List<Short> {
+    return data.mapIndexed { index, _ ->
+        val from = maxOf(0, index - windowSize / 2)
+        val to = minOf(data.size, index + windowSize / 2 + 1)
+        (data.subList(from, to).sum() / (to - from)).toShort()
+    }
 }
 
 @Preview(showBackground = true)
@@ -233,18 +243,22 @@ fun WaveformDisplay(
     waveform: List<Short>,
     modifier: Modifier = Modifier
 ) {
-    val maxSamples = 300
+    val maxSamples = 20
     val waveformBuffer = remember { mutableStateListOf<Short>() }
 
     LaunchedEffect(waveform) {
-        val batchSize = 128
-        val averaged = waveform.chunked(batchSize).map { chunk ->
-            (chunk.sum() /*/ chunk.size*/).toShort()
+        val cleaned = movingAverage(waveform)
+        val noiseThreshold = 1000.toShort()
+        val filtered = cleaned.map { if (kotlin.math.abs(it.toInt()) < noiseThreshold) 0.toShort() else it }
+
+        val batchSize = 320
+        val averaged = filtered.chunked(batchSize).map { chunk ->
+            if (chunk.isNotEmpty()) (chunk.sum() /*/ chunk.size*/).toShort() else 0.toShort()
         }
 
         waveformBuffer.addAll(averaged)
-        while (waveformBuffer.size > maxSamples) {
-            waveformBuffer.removeFirst()
+        if (waveformBuffer.size > maxSamples) {
+            waveformBuffer.removeRange(0, waveformBuffer.size - maxSamples)
         }
     }
 
@@ -263,11 +277,11 @@ fun WaveformDisplay(
             val normalized = sample / Short.MAX_VALUE.toFloat()
             val x = index * widthPerSample
 
-            if (kotlin.math.abs(normalized) < 0.2f) {
+            if (kotlin.math.abs(normalized) < 0.02f) {
                 drawCircle(
                     color = Color(0x44CCCCCC),
                     center = Offset(x, centerY),
-                    radius = 1.5f
+                    radius = 3f
                 )
             } else {
                 val y = (normalized * centerY)
@@ -275,7 +289,8 @@ fun WaveformDisplay(
                     color = Color(0x88DDDDDD),
                     start = Offset(x, centerY - y),
                     end = Offset(x, centerY + y),
-                    strokeWidth = 2f
+                    strokeWidth = 8f,
+                    cap = StrokeCap.Round
                 )
             }
         }

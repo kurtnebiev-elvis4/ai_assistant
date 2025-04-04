@@ -5,6 +5,7 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +68,7 @@ class WavRecorder @Inject constructor(
         audioRecord.startRecording()
         startTime = System.currentTimeMillis()
 
+        var index = 0
         GlobalScope.launch(Dispatchers.IO) {
             while (audioRecord.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
                 val bytesRead = audioRecord.read(buffer, 0, buffer.size)
@@ -75,6 +77,7 @@ class WavRecorder @Inject constructor(
                     withContext(Dispatchers.Default) {
                         val shortBuffer = ShortArray(bytesRead / 2)
                         ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shortBuffer)
+                        Log.e("AudioRecorder", "Received ${shortBuffer.size} samples")
                         audioDataListener?.onAudioDataReceived(shortBuffer)
                     }
                 }
@@ -94,8 +97,6 @@ class WavRecorder @Inject constructor(
                     outputStream = FileOutputStream(outputFile)
                     outputStream.write(ByteArray(44)) // новый заголовок
                 }
-
-                delay(1)
             }
 
             endTime = System.currentTimeMillis()
@@ -105,7 +106,6 @@ class WavRecorder @Inject constructor(
             writeWavHeader(outputFile, totalAudioLen, sampleRate)
             outputStream.close()
         }
-
     }
 
 

@@ -1,10 +1,11 @@
+import asyncio
+import os
+import soundfile as sf
+import uuid
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
-import os
-import uuid
-import asyncio
-import soundfile as sf
-from assistant_background import run_full_analysis_pipeline, RESULT_TYPES, allowed_extensions
+
+from assistant_background import (run_full_analysis_pipeline, RESULT_TYPES, allowed_extensions, chunk_file)
 
 app = FastAPI()
 
@@ -49,6 +50,36 @@ async def upload_audio(file: UploadFile = File(...), background_tasks: Backgroun
 
     # Возвращаем идентификатор файла для последующего скачивания результата
     return {"message": "Файл получен и обрабатывается", "file_id": file_id}
+
+
+@app.post("/upload-chunk/{session_id}")
+async def upload_chunk(
+        session_id: str,
+        chunk_index: int,
+        is_last_chunk: bool,
+        chunk: UploadFile = File(...),
+        background_tasks: BackgroundTasks = None
+):
+    file_extension = os.path.splitext(chunk.filename)[1]
+    if file_extension.lower() not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"Unsupported file format. Allowed formats: {allowed_extensions}")
+
+    chunk_filepath = chunk_file(session_id, chunk_index, file_extension)
+
+    content = await chunk.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded chunk is empty or corrupted")
+
+    with open(chunk_filepath, "wb") as f:
+        f.write(content)
+
+    background_tasks.add_task(run_transcript_chunk_pipeline, session_id, chunk_index)
+
+    if is_last_chunk:
+        background_tasks.add_task(run_full_analysis_pipeline, session_id)
+
+    return {"message": "Chunk received", "session_id": session_id, "chunk_index": chunk_index,
+            "is_last_chunk": is_last_chunk}
 
 
 @app.get("/download/{file_id}")
