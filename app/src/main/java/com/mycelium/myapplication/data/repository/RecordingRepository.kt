@@ -62,23 +62,23 @@ class RecordingRepository @Inject constructor(
             filePath = file.absolutePath,
             status = UploadStatus.PENDING
         )
-        
+
         val queueId = chunkUploadQueueDao.insertChunk(queueItem)
-        
+
         // Try to upload immediately
         processChunkUpload(queueId)
     }
-    
+
     private suspend fun processChunkUpload(chunkId: Long) {
         withContext(Dispatchers.IO) {
             try {
                 // Get the chunk from the queue
                 val chunk = chunkUploadQueueDao.getChunksWithStatus(UploadStatus.PENDING).firstOrNull()
                     ?.firstOrNull { it.id == chunkId } ?: return@withContext
-                
+
                 // Mark as in progress
                 chunkUploadQueueDao.updateChunkStatus(chunkId, UploadStatus.IN_PROGRESS)
-                
+
                 // Prepare file for upload
                 val file = File(chunk.filePath)
                 if (!file.exists()) {
@@ -86,19 +86,19 @@ class RecordingRepository @Inject constructor(
                     chunkUploadQueueDao.deleteChunk(chunk)
                     return@withContext
                 }
-                
+
                 val mediaType = context.contentResolver.getType(file.toUri())
                 val requestFile = create(mediaType?.toMediaTypeOrNull(), file)
                 val body = MultipartBody.Part.createFormData("chunk", file.name, requestFile)
-                
+
                 // Upload the chunk
                 val response = assistantApi.uploadChunk(
-                    chunk.sessionId, 
-                    chunk.chunkIndex, 
-                    chunk.isLastChunk, 
+                    chunk.sessionId,
+                    chunk.chunkIndex,
+                    chunk.isLastChunk,
                     body
                 )
-                
+
                 if (response.isSuccessful) {
                     // Upload successful, remove from queue
                     chunkUploadQueueDao.updateChunkStatus(chunkId, UploadStatus.COMPLETED)
@@ -116,12 +116,12 @@ class RecordingRepository @Inject constructor(
             }
         }
     }
-    
+
     // This method can be called from a worker or service to retry failed uploads
     suspend fun retryFailedUploads(maxRetries: Int = 3) {
         withContext(Dispatchers.IO) {
             val failedChunks = chunkUploadQueueDao.getChunksWithStatus(UploadStatus.FAILED).firstOrNull() ?: emptyList()
-            
+
             for (chunk in failedChunks) {
                 if (chunk.retryCount < maxRetries) {
                     // Mark as pending and retry
@@ -131,11 +131,12 @@ class RecordingRepository @Inject constructor(
             }
         }
     }
-    
+
     // Start a background process to check for pending uploads
     fun startUploadQueue() {
         coroutineScope.launch {
-            val pendingChunks = chunkUploadQueueDao.getChunksWithStatus(UploadStatus.PENDING).firstOrNull() ?: emptyList()
+            val pendingChunks =
+                chunkUploadQueueDao.getChunksWithStatus(UploadStatus.PENDING).firstOrNull() ?: emptyList()
             for (chunk in pendingChunks) {
                 processChunkUpload(chunk.id)
             }

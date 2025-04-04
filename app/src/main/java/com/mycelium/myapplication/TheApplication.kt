@@ -1,37 +1,27 @@
 package com.mycelium.myapplication
 
 import android.app.Application
-import android.util.Log
-import com.mycelium.myapplication.data.repository.RecordingRepository
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import com.mycelium.myapplication.data.repository.UploadChunkWorker
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
-class TheApplication : Application() {
+class TheApplication : Application(), Configuration.Provider {
+
     @Inject
-    lateinit var recordingRepository: RecordingRepository
-    
-    private val applicationScope = CoroutineScope(Dispatchers.IO)
-    
+    lateinit var workerFactory: HiltWorkerFactory
+
+    override val workManagerConfiguration: Configuration =
+        Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
+
     override fun onCreate() {
         super.onCreate()
-        
-        // Initialize upload queue on app start
-        applicationScope.launch {
-            try {
-                // Start processing any pending uploads
-                recordingRepository.startUploadQueue()
-                // Attempt to retry any failed uploads
-                recordingRepository.retryFailedUploads()
-            } catch (e: Exception) {
-                Log.e("TheApplication", "Error starting upload queue", e)
-            }
-        }
-        
+
+        UploadChunkWorker.enqueueOneTimeUploadWorker(this)
         // Schedule periodic worker to retry failed uploads
         UploadChunkWorker.schedulePeriodicUploadWorker(this)
     }

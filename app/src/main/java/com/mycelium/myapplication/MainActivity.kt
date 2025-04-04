@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.mycelium.myapplication.data.repository.UploadChunkWorker
 import com.mycelium.myapplication.ui.recording.RecordingScreen
 import com.mycelium.myapplication.ui.theme.MyApplicationTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+        UploadChunkWorker.enqueueOneTimeUploadWorker(this)
     }
 
     private fun requestAudioPermission() {
