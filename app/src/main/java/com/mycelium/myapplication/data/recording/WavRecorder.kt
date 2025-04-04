@@ -82,12 +82,9 @@ class WavRecorder @Inject constructor(
                     }
                 }
 
-                // Проверка на превышение 1 минуты
-                if (System.currentTimeMillis() - chunkStartTime >= 60_000) {
-                    val totalAudioLen = outputFile.length() - 44
-                    writeWavHeader(outputFile, totalAudioLen, sampleRate)
-                    outputStream.close()
-                    chunkListener?.onChunkFinished(chunkIndex, outputFile)
+                // Проверка на превышение 5 минуты
+                if (System.currentTimeMillis() - chunkStartTime >= 5 * 60_000) {
+                    chunkFinished(outputFile, outputStream, chunkIndex)
 
                     // Начинаем новый чанк
                     chunkIndex++
@@ -99,6 +96,7 @@ class WavRecorder @Inject constructor(
                     outputStream.write(ByteArray(44)) // новый заголовок
                 }
             }
+            chunkFinished(outputFile, outputStream, chunkIndex)
 
             endTime = System.currentTimeMillis()
             audioRecord.stop()
@@ -170,4 +168,15 @@ class WavRecorder @Inject constructor(
         data[offset] = (value.toInt() and 0xff).toByte()
         data[offset + 1] = ((value.toInt() shr 8) and 0xff).toByte()
     }
+}
+
+private fun WavRecorder.chunkFinished(
+    outputFile: File,
+    outputStream: FileOutputStream,
+    chunkIndex: Int
+) {
+    val totalAudioLen = outputFile.length() - 44
+    writeWavHeader(outputFile, totalAudioLen, sampleRate)
+    outputStream.close()
+    chunkListener?.onChunkFinished(chunkIndex, outputFile)
 }

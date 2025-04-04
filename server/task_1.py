@@ -1,14 +1,20 @@
-from transformers import T5Tokenizer, T5ForConditionalGeneration
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from langdetect import detect
 import torch
 import os
 
 UPLOAD_DIR = "uploads"
 
-tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
-model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = model.to(device)
+# Загрузка Qwen 14B (Distill)
+model_id = "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"
+tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    model_id,
+    torch_dtype=torch.float16,
+    device_map="auto",
+    trust_remote_code=True
+)
+model.eval()
 
 
 def summarize_transcript(file_id: str, transcript_path: str) -> str:
@@ -16,13 +22,10 @@ def summarize_transcript(file_id: str, transcript_path: str) -> str:
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
     lang = detect(whisper_text)
-    if lang == "ru":
-        prompt = "Сделай краткое резюме: "
-    else:
-        prompt = "Summarize this meeting: "
+    prompt = "Сделай краткое резюме: " if lang == "ru" else "Summarize this meeting: "
     input_text = prompt + whisper_text
-    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(device)
-    outputs = model.generate(input_ids)
+    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(model.device)
+    outputs = model.generate(input_ids, max_new_tokens=200, do_sample=True, temperature=0.7, top_p=0.95)
     summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
     output_path = os.path.join(UPLOAD_DIR, f"{file_id}_summary.txt")
     with open(output_path, "w", encoding="utf-8") as out:
@@ -35,13 +38,10 @@ def extract_decisions_from_transcript(file_id: str, transcript_path: str) -> lis
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
     lang = detect(whisper_text)
-    if lang == "ru":
-        prompt = "Выдели все принятые решения на этом совещании:\n"
-    else:
-        prompt = "List all decisions made in the following meeting:\n"
+    prompt = "Выдели все принятые решения на этом совещании:\n" if lang == "ru" else "List all decisions made in the following meeting:\n"
     input_text = prompt + whisper_text
-    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(device)
-    outputs = model.generate(input_ids, max_new_tokens=200)
+    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(model.device)
+    outputs = model.generate(input_ids, max_new_tokens=200, do_sample=True, temperature=0.7, top_p=0.95)
     decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     decisions = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]
     output_path = os.path.join(UPLOAD_DIR, f"{file_id}_decisions.txt")
@@ -55,13 +55,10 @@ def extract_tasks_from_transcript(file_id: str, transcript_path: str) -> list:
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
     lang = detect(whisper_text)
-    if lang == "ru":
-        prompt = "Перечисли задачи и действия, которые нужно выполнить после этого совещания:\n"
-    else:
-        prompt = "List all action items and tasks discussed in this meeting:\n"
+    prompt = "Перечисли задачи и действия, которые нужно выполнить после этого совещания:\n" if lang == "ru" else "List all action items and tasks discussed in this meeting:\n"
     input_text = prompt + whisper_text
-    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(device)
-    outputs = model.generate(input_ids, max_new_tokens=200)
+    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(model.device)
+    outputs = model.generate(input_ids, max_new_tokens=200, do_sample=True, temperature=0.7, top_p=0.95)
     decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     tasks = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]
     output_path = os.path.join(UPLOAD_DIR, f"{file_id}_tasks.txt")
