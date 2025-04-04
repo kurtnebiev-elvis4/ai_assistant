@@ -12,11 +12,11 @@ import javax.inject.Singleton
 @Singleton
 class AudioRecorder @Inject constructor(
     @ApplicationContext private val context: Context
-) {
+) : IAudioRecorder {
     private var mediaRecorder: MediaRecorder? = null
     private var currentFile: File? = null
 
-    fun startRecording(sessionId: String) {
+    override fun startRecording(sessionId: String) {
         val outputFile = File(context.cacheDir, "recording_$sessionId.mp3")
         currentFile = outputFile
 
@@ -36,7 +36,7 @@ class AudioRecorder @Inject constructor(
         }
     }
 
-    fun stopRecording(): String? {
+    override fun stopRecording(): String? {
         return try {
             mediaRecorder?.apply {
                 stop()
@@ -49,4 +49,6 @@ class AudioRecorder @Inject constructor(
             null
         }
     }
-} 
+
+    override fun recordedTime(): Long = 0
+}

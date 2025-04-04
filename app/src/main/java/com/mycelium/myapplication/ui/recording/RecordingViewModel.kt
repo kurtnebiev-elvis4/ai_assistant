@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.recording.AudioRecorder
+import com.mycelium.myapplication.data.recording.IAudioRecorder
+import com.mycelium.myapplication.data.recording.WavRecorder
 import com.mycelium.myapplication.data.repository.RecordingRepository
 import common.push
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +20,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
+
+sealed class RecordingState {
+    object Idle : RecordingState()
+    class Recording(time: String) : RecordingState()
+    data class Uploaded(val session: RecordingSession) : RecordingState()
+    data class Error(val message: String) : RecordingState()
+}
+
+sealed class PermissionState {
+    object Unknown : PermissionState()
+    object Granted : PermissionState()
+    object Denied : PermissionState()
+}
 
 @HiltViewModel
 class RecordingViewModel @Inject constructor(
@@ -31,7 +46,7 @@ class RecordingViewModel @Inject constructor(
     val recordings = repository.getAllRecordings()
 
     private var currentSession: RecordingSession? = null
-    private var audioRecorder: AudioRecorder? = null
+    private var audioRecorder: IAudioRecorder? = null
 
 //    fun updatePermissionState(granted: Boolean) {
 //        _permissionState.value = if (granted) PermissionState.Granted else PermissionState.Denied
@@ -46,13 +61,25 @@ class RecordingViewModel @Inject constructor(
 //                }
                 currentSession = RecordingSession()
                 repository.insertRecording(currentSession!!)
-                audioRecorder = AudioRecorder(context)
+                audioRecorder = WavRecorder(context)
                 audioRecorder?.startRecording(currentSession!!.id)
-                push(RecordingState.Recording)
+                push(RecordingState.Recording(audioRecorder?.recordedTime()?.formatMilliseconds().orEmpty()))
             } catch (e: Exception) {
                 push(RecordingState.Error(e.message ?: "Failed to start recording"))
             }
         }
+    }
+
+    private fun Long.formatMilliseconds(): String {
+        val totalSeconds = this / 1000
+        val seconds = totalSeconds % 60
+        val minutes = (totalSeconds / 60) % 60
+        val hours = totalSeconds / 3600
+
+        return if (hours > 0)
+            String.format("%02d:%02d:%02d", hours, minutes, seconds)
+        else
+            String.format("%02d:%02d", minutes, seconds)
     }
 
     override fun stopRecording() {
@@ -107,15 +134,3 @@ class RecordingViewModel @Inject constructor(
     }
 }
 
-sealed class RecordingState {
-    object Idle : RecordingState()
-    object Recording : RecordingState()
-    data class Uploaded(val session: RecordingSession) : RecordingState()
-    data class Error(val message: String) : RecordingState()
-}
-
-sealed class PermissionState {
-    object Unknown : PermissionState()
-    object Granted : PermissionState()
-    object Denied : PermissionState()
-} 
