@@ -21,5 +21,5 @@ pip3 install fastapi uvicorn
 echo "✅ Установка завершена"
 echo "🌍 Внешний IP сервера:"
 curl ifconfig.me
-echo "📡 Запустить сервер можно командой:"
 nohup uvicorn assistant:app --host 0.0.0.0 --port 8000 --reload > server.log 2>&1 &
+echo "📡 Сервер запушен"

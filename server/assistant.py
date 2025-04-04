@@ -89,13 +89,13 @@ async def start_analysis(session_id: str, background_tasks: BackgroundTasks = No
     return {"message": "session finished", "session_id": session_id}
 
 
-@app.get("/download/{file_id}")
-async def download_result(file_id: str, type: str = "transcript"):
+@app.get("/{session_id}/download")
+async def download_result(session_id: str, type: str = "transcript"):
     if type not in RESULT_TYPES:
         raise HTTPException(status_code=400, detail="Unknown result type.")
 
     suffix = RESULT_TYPES[type]
-    file_path = os.path.join(UPLOAD_DIR, f"{file_id}{suffix}.txt")
+    file_path = os.path.join(UPLOAD_DIR, f"{session_id}{suffix}.txt")
 
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Requested result not found yet. Try again later.")
@@ -104,13 +104,13 @@ async def download_result(file_id: str, type: str = "transcript"):
     return FileResponse(path=file_path, media_type="text/plain", filename=filename)
 
 
-@app.get("/status/{file_id}")
-async def get_status(file_id: str):
+@app.get("/{session_id}/status")
+async def get_status(session_id: str):
     result_types = list(RESULT_TYPES.keys())
     status = {}
     for result_type in result_types:
         suffix = "" if result_type == "transcript" else f"_{result_type}"
-        file_path = os.path.join(UPLOAD_DIR, f"{file_id}{suffix}.txt")
+        file_path = os.path.join(UPLOAD_DIR, f"{session_id}{suffix}.txt")
         status[result_type] = os.path.exists(file_path)
 
     status["ready"] = all(status[result_type] for result_type in result_types)
