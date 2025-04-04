@@ -77,7 +77,7 @@ class WavRecorder @Inject constructor(
                     withContext(Dispatchers.Default) {
                         val shortBuffer = ShortArray(bytesRead / 2)
                         ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shortBuffer)
-                        Log.e("AudioRecorder", "Received ${shortBuffer.size} samples")
+//                        Log.e("AudioRecorder", "Received ${shortBuffer.size} samples")
                         audioDataListener?.onAudioDataReceived(shortBuffer)
                     }
                 }
@@ -87,13 +87,14 @@ class WavRecorder @Inject constructor(
                     val totalAudioLen = outputFile.length() - 44
                     writeWavHeader(outputFile, totalAudioLen, sampleRate)
                     outputStream.close()
+                    chunkListener?.onChunkFinished(chunkIndex, outputFile)
 
                     // Начинаем новый чанк
                     chunkIndex++
                     chunkStartTime = System.currentTimeMillis()
                     outputFile = File(context.cacheDir, "recording_${sessionId}_$chunkIndex.wav")
                     currentFile = outputFile
-                    chunkListener?.onNewChunk(outputFile)
+                    chunkListener?.onNewChunk(chunkIndex, outputFile)
                     outputStream = FileOutputStream(outputFile)
                     outputStream.write(ByteArray(44)) // новый заголовок
                 }

@@ -1,9 +1,11 @@
 package com.mycelium.myapplication.data.recording
 
+import androidx.room.Index
 import java.io.File
 
 interface ChunkListener {
-    fun onNewChunk(file: File)
+    fun onNewChunk(chunkIndex: Int, file: File)
+    fun onChunkFinished(chunkIndex: Int, file: File)
 }
 
 interface AudioDataListener {

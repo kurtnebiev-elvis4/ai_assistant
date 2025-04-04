@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.mycelium.myapplication.data.db.RecordingDatabase
 import com.mycelium.myapplication.data.db.RecordingDao
+import com.mycelium.myapplication.data.repository.AssistantApi
 import com.mycelium.myapplication.data.repository.RecordingRepository
 import dagger.Module
 import dagger.Provides
@@ -35,7 +36,11 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideRecordingRepository(recordingDao: RecordingDao): RecordingRepository {
-        return RecordingRepository(recordingDao)
+    fun provideRecordingRepository(
+        @ApplicationContext context: Context,
+        recordingDao: RecordingDao,
+        assistantApi: AssistantApi
+    ): RecordingRepository {
+        return RecordingRepository(context, recordingDao, assistantApi)
     }
 } 

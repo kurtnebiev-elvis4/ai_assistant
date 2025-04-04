@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.recording.AudioDataListener
 import com.mycelium.myapplication.data.recording.AudioRecorder
+import com.mycelium.myapplication.data.recording.ChunkListener
 import com.mycelium.myapplication.data.recording.IAudioRecorder
 import com.mycelium.myapplication.data.recording.WavRecorder
 import com.mycelium.myapplication.data.repository.RecordingRepository
@@ -57,6 +58,16 @@ class RecordingViewModel @Inject constructor(
 //        _permissionState.value = if (granted) PermissionState.Granted else PermissionState.Denied
 //    }
 
+    init {
+        viewModelScope.launch {
+            try {
+                repository.health()
+            } catch (e: Exception) {
+
+            }
+        }
+    }
+
     override fun startRecording() {
         viewModelScope.launch(Dispatchers.Default) {
             try {
@@ -70,6 +81,18 @@ class RecordingViewModel @Inject constructor(
                     audioDataListener = object : AudioDataListener {
                         override fun onAudioDataReceived(data: ShortArray) {
                             _waveform.value = data.toList()
+                        }
+                    }
+                    chunkListener = object : ChunkListener {
+                        override fun onNewChunk(chunkIndex: Int, file: File) {
+                        }
+
+                        override fun onChunkFinished(chunkIndex: Int, file: File) {
+                            viewModelScope.launch(Dispatchers.Default) {
+                                currentSession?.let {
+                                    repository.uploadChunk(it.id, chunkIndex, false, file)
+                                }
+                            }
                         }
                     }
                 }

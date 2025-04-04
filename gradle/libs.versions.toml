@@ -13,6 +13,7 @@ hiltNavigationCompose = "1.2.0"
 hiltWork = "1.2.0"
 room = "2.6.1"
 roomKtx = "2.6.1"
+retrofit = "2.11.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -37,6 +38,10 @@ hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hiltWork" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomKtx" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+retrofit-bom = { module = "com.squareup.retrofit2:retrofit-bom", version.ref = "retrofit" }
+retrofit = { module = "com.squareup.retrofit2:retrofit" }
+retrofit-scalars = { module = "com.squareup.retrofit2:converter-scalars" }
+retrofit-gson = { module = "com.squareup.retrofit2:converter-gson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -45,3 +50,6 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 ksp = { id = "com.google.devtools.ksp", version = "2.1.10-1.0.29" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 room = { id = "androidx.room", version.ref = "room" }
+
+[bundles]
+retrofit-bom = ["retrofit", "retrofit-scalars", "retrofit-gson"]

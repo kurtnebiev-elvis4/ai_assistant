@@ -64,6 +64,10 @@ dependencies {
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
 
+    implementation(platform(libs.retrofit.bom))
+    implementation(libs.bundles.retrofit.bom)
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
