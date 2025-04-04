@@ -53,6 +53,10 @@ class RecordingRepository @Inject constructor(
         assistantApi.checkHealth()
     }
 
+    suspend fun finishSession(sessionId: String) {
+        assistantApi.sessionFinished(sessionId)
+    }
+
     suspend fun uploadChunk(sessionId: String, chunkIndex: Int, isLastChunk: Boolean, file: File) {
         // Add chunk to upload queue first
         val queueItem = ChunkUploadQueue(

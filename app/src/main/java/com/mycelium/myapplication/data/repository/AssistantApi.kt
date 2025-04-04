@@ -22,13 +22,18 @@ interface AssistantApi {
     ): Response<UploadResponse>
 
     @Multipart
-    @POST("upload-chunk/{session_id}")
+    @POST("{session_id}/upload-chunk")
     suspend fun uploadChunk(
         @Path("session_id") sessionId: String,
         @Query("chunk_index") chunkIndex: Int,
         @Query("is_last_chunk") isLastChunk: Boolean,
         @Part chunk: MultipartBody.Part
     ): Response<ChunkUploadResponse>
+
+    @POST("{session_id}/analyse")
+    suspend fun sessionFinished(
+        @Path("session_id") sessionId: String
+    )
 
     @GET("download/{file_id}")
     suspend fun downloadResult(

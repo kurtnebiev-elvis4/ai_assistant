@@ -53,7 +53,7 @@ async def upload_audio(file: UploadFile = File(...), background_tasks: Backgroun
     return {"message": "Файл получен и обрабатывается", "file_id": file_id}
 
 
-@app.post("/upload-chunk/{session_id}")
+@app.post("/{session_id}/upload-chunk")
 async def upload_chunk(
         session_id: str,
         chunk_index: int,
@@ -81,6 +81,12 @@ async def upload_chunk(
 
     return {"message": "Chunk received", "session_id": session_id, "chunk_index": chunk_index,
             "is_last_chunk": is_last_chunk}
+
+
+@app.post("/{session_id}/analyse")
+async def start_analysis(session_id: str, background_tasks: BackgroundTasks = None):
+    background_tasks.add_task(run_full_analysis_pipeline, session_id)
+    return {"message": "session finished", "session_id": session_id}
 
 
 @app.get("/download/{file_id}")

@@ -141,24 +141,28 @@ class RecordingViewModel @Inject constructor(
 
     override fun stopRecording() {
         viewModelScope.launch {
-            try {
-                currentSession?.let { session ->
-                    audioRecorder?.stopRecording()?.let { filePath ->
-                        session.audioFilePath = filePath
-                        session.endTime = System.currentTimeMillis()
-                        // Set file size
-                        File(filePath).let { file ->
-                            if (file.exists()) {
-                                session.fileSize = file.length()
-                            }
-                        }
-                        repository.updateRecording(session)
-                        uploadRecording(session)
-                    }
+            currentSession?.let { session ->
+                try {
+                    audioRecorder?.stopRecording()
+                    delay(100)
+                    repository.finishSession(session.id)
+//                        ?.let { filePath ->
+//                        session.audioFilePath = filePath
+//                        session.endTime = System.currentTimeMillis()
+//                        // Set file size
+//                        File(filePath).let { file ->
+//                            if (file.exists()) {
+//                                session.fileSize = file.length()
+//                            }
+//                        }
+//                        repository.updateRecording(session)
+//                        uploadRecording(session)
+//                    }
+
+                    push(uiState.copy(isRecording = false))
+                } catch (e: Exception) {
+                    push(uiState.copy(error = e.message ?: "Failed to stop recording"))
                 }
-                push(uiState.copy(isRecording = false))
-            } catch (e: Exception) {
-                push(uiState.copy(error = e.message ?: "Failed to stop recording"))
             }
         }
     }

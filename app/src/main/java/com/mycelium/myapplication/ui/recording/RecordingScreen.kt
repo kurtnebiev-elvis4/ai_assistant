@@ -221,7 +221,9 @@ fun RecordButton(
                     contentDescription = "Start Recording"
                 )
             }
-            WaveformDisplay(waveform, Modifier.align(Alignment.Center))
+            if (isRecording) {
+                WaveformDisplay(waveform, Modifier.align(Alignment.Center))
+            }
             if (time.isNotEmpty()) {
                 Text(
                     modifier = Modifier
@@ -237,7 +239,6 @@ fun RecordButton(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
 fun WaveformDisplay(
     waveform: List<Short>,
