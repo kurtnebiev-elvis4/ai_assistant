@@ -5,7 +5,10 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -15,16 +18,19 @@ object NetworkModule {
     @Singleton
     fun provideAssistantApi(): AssistantApi {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.HEADERS
         }
 
-        val client = okhttp3.OkHttpClient.Builder()
+        val client = OkHttpClient.Builder()
             .addInterceptor(logging)
             .build()
 
-        val retrofit = retrofit2.Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:8000/")
-            .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
+        val runpodId = "pn8vl8jb7ugske"
+        val port = 8000
+        val server = "https://$runpodId-$port.proxy.runpod.net/"
+        val retrofit = Retrofit.Builder()
+            .baseUrl(server)
+            .addConverterFactory(GsonConverterFactory.create())
             .client(client)
             .build()
 

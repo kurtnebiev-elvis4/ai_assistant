@@ -57,8 +57,11 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
-//    implementation(libs.hilt.work)
+    implementation(libs.hilt.work)
     ksp(libs.hilt.hilt.compiler)
+    
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
 
     implementation(libs.room.ktx)
     implementation(libs.room.runtime)
@@ -66,7 +69,7 @@ dependencies {
 
     implementation(platform(libs.retrofit.bom))
     implementation(libs.bundles.retrofit.bom)
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation(libs.logging.interceptor)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

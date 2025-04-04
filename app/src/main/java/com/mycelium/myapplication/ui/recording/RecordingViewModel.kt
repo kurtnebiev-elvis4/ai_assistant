@@ -3,6 +3,7 @@ package com.mycelium.myapplication.ui.recording
 import common.UIStateManager
 import common.WithUIStateManger
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mycelium.myapplication.data.model.RecordingSession
@@ -17,6 +18,7 @@ import common.uiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,8 +64,12 @@ class RecordingViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.health()
+                // Start the upload queue to process any pending chunks
+                repository.startUploadQueue()
+                // Retry any failed uploads
+                repository.retryFailedUploads()
             } catch (e: Exception) {
-
+                Log.e("RecordingViewModel", "Error during initialization", e)
             }
         }
     }
@@ -85,12 +91,20 @@ class RecordingViewModel @Inject constructor(
                     }
                     chunkListener = object : ChunkListener {
                         override fun onNewChunk(chunkIndex: Int, file: File) {
+                            // Could be used for real-time progress updates if needed
                         }
 
                         override fun onChunkFinished(chunkIndex: Int, file: File) {
-                            viewModelScope.launch(Dispatchers.Default) {
-                                currentSession?.let {
-                                    repository.uploadChunk(it.id, chunkIndex, false, file)
+                            viewModelScope.launch(Dispatchers.IO) {
+                                try {
+                                    currentSession?.let { session ->
+                                        // Add to queue and attempt to upload
+                                        // The isLastChunk parameter will be set to false here as this is a chunk
+                                        repository.uploadChunk(session.id, chunkIndex, false, file)
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("RecordingViewModel", "Failed to queue chunk upload", e)
+                                    // Even if there's an error adding to the queue, we'll retry later via the worker
                                 }
                             }
                         }

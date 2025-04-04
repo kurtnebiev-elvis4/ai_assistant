@@ -2,6 +2,9 @@ package com.mycelium.myapplication.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.mycelium.myapplication.data.db.ChunkUploadQueueDao
 import com.mycelium.myapplication.data.db.RecordingDatabase
 import com.mycelium.myapplication.data.db.RecordingDao
 import com.mycelium.myapplication.data.repository.AssistantApi
@@ -36,11 +39,18 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideRecordingRepository(
-        @ApplicationContext context: Context,
-        recordingDao: RecordingDao,
-        assistantApi: AssistantApi
-    ): RecordingRepository {
-        return RecordingRepository(context, recordingDao, assistantApi)
+    fun provideChunkUploadQueueDao(database: RecordingDatabase): ChunkUploadQueueDao {
+        return database.chunkUploadQueueDao()
     }
+
+//    @Provides
+//    @Singleton
+//    fun provideRecordingRepository(
+//        @ApplicationContext context: Context,
+//        recordingDao: RecordingDao,
+//        chunkUploadQueueDao: ChunkUploadQueueDao,
+//        assistantApi: AssistantApi
+//    ): RecordingRepository {
+//        return RecordingRepository(context, recordingDao, chunkUploadQueueDao, assistantApi)
+//    }
 } 
