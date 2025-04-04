@@ -6,13 +6,16 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mycelium.myapplication.data.model.RecordingSession
+import com.mycelium.myapplication.data.recording.AudioDataListener
 import com.mycelium.myapplication.data.recording.AudioRecorder
 import com.mycelium.myapplication.data.recording.IAudioRecorder
 import com.mycelium.myapplication.data.recording.WavRecorder
 import com.mycelium.myapplication.data.repository.RecordingRepository
 import common.push
+import common.uiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,12 +24,11 @@ import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
 
-sealed class RecordingState {
-    object Idle : RecordingState()
-    class Recording(time: String) : RecordingState()
-    data class Uploaded(val session: RecordingSession) : RecordingState()
-    data class Error(val message: String) : RecordingState()
-}
+data class RecordingState(
+    val isRecording: Boolean = false,
+    val time: String = "",
+    val error: String = ""
+)
 
 sealed class PermissionState {
     object Unknown : PermissionState()
@@ -43,6 +45,9 @@ class RecordingViewModel @Inject constructor(
     private val _permissionState = MutableStateFlow<PermissionState>(PermissionState.Unknown)
     val permissionState: StateFlow<PermissionState> = _permissionState.asStateFlow()
 
+    private val _waveform = MutableStateFlow<List<Short>>(emptyList())
+    val waveform: StateFlow<List<Short>> = _waveform.asStateFlow()
+
     val recordings = repository.getAllRecordings()
 
     private var currentSession: RecordingSession? = null
@@ -53,7 +58,7 @@ class RecordingViewModel @Inject constructor(
 //    }
 
     override fun startRecording() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             try {
 //                if (_permissionState.value != PermissionState.Granted) {
 //                    push(RecordingState.Error("Microphone permission not granted"))
@@ -61,11 +66,26 @@ class RecordingViewModel @Inject constructor(
 //                }
                 currentSession = RecordingSession()
                 repository.insertRecording(currentSession!!)
-                audioRecorder = WavRecorder(context)
+                audioRecorder = WavRecorder(context).apply {
+                    audioDataListener = object : AudioDataListener {
+                        override fun onAudioDataReceived(data: ShortArray) {
+                            _waveform.value = data.toList()
+                        }
+                    }
+                }
                 audioRecorder?.startRecording(currentSession!!.id)
-                push(RecordingState.Recording(audioRecorder?.recordedTime()?.formatMilliseconds().orEmpty()))
+                push(
+                    uiState.copy(
+                        isRecording = true,
+                        time = audioRecorder?.recordedTime()?.formatMilliseconds().orEmpty()
+                    )
+                )
             } catch (e: Exception) {
-                push(RecordingState.Error(e.message ?: "Failed to start recording"))
+                push(uiState.copy(error = e.message ?: "Failed to start recording"))
+            }
+            while (audioRecorder?.isRecording() == true) {
+                delay(1000)
+                push(uiState.copy(time = audioRecorder?.recordedTime()?.formatMilliseconds().orEmpty()))
             }
         }
     }
@@ -99,9 +119,9 @@ class RecordingViewModel @Inject constructor(
                         uploadRecording(session)
                     }
                 }
-                push(RecordingState.Idle)
+                push(uiState.copy(isRecording = false))
             } catch (e: Exception) {
-                push(RecordingState.Error(e.message ?: "Failed to stop recording"))
+                push(uiState.copy(error = e.message ?: "Failed to stop recording"))
             }
         }
     }
@@ -114,7 +134,7 @@ class RecordingViewModel @Inject constructor(
                     File(filePath).delete()
                 }
             } catch (e: Exception) {
-                push(RecordingState.Error(e.message ?: "Failed to delete recording"))
+                push(uiState.copy(error = e.message ?: "Failed to delete recording"))
             }
         }
     }
@@ -127,9 +147,8 @@ class RecordingViewModel @Inject constructor(
             delay(1000)
             session.isUploaded = true
             repository.updateRecording(session)
-            push(RecordingState.Uploaded(session))
         } catch (e: Exception) {
-            push(RecordingState.Error(e.message ?: "Failed to upload recording"))
+            push(uiState.copy(error = e.message ?: "Failed to upload recording"))
         }
     }
 }

@@ -11,17 +11,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import javax.inject.Inject
 import javax.inject.Singleton
+
 
 @Singleton
 class WavRecorder @Inject constructor(
     @ApplicationContext private val context: Context
 ) : IAudioRecorder {
     private var currentFile: File? = null
+    override var audioDataListener: AudioDataListener? = null
+    override var chunkListener: ChunkListener? = null
 
     val sampleRate = 16000
     val channelConfig = AudioFormat.CHANNEL_IN_MONO
@@ -36,6 +42,9 @@ class WavRecorder @Inject constructor(
         else if (endTime == 0L) System.currentTimeMillis() - startTime
         else endTime - startTime
 
+    override fun isRecording(): Boolean =
+        audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun startRecording(sessionId: String) {
         val audioRecord = AudioRecord(
@@ -47,12 +56,14 @@ class WavRecorder @Inject constructor(
         )
         this.audioRecord = audioRecord
 
-        val outputFile = File(context.cacheDir, "recording_$sessionId.mp3")
+        var chunkIndex = 0
+        var chunkStartTime = System.currentTimeMillis()
+        var outputFile = File(context.cacheDir, "recording_${sessionId}_$chunkIndex.wav")
         currentFile = outputFile
-
-        val outputStream = FileOutputStream(outputFile)
+        var outputStream = FileOutputStream(outputFile)
         val buffer = ByteArray(bufferSize)
-        outputStream.write(ByteArray(44))
+        outputStream.write(ByteArray(44)) // WAV header placeholder
+
         audioRecord.startRecording()
         startTime = System.currentTimeMillis()
 
@@ -61,13 +72,37 @@ class WavRecorder @Inject constructor(
                 val bytesRead = audioRecord.read(buffer, 0, buffer.size)
                 if (bytesRead > 0) {
                     outputStream.write(buffer, 0, bytesRead)
+                    withContext(Dispatchers.Default) {
+                        val shortBuffer = ShortArray(bytesRead / 2)
+                        ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shortBuffer)
+                        audioDataListener?.onAudioDataReceived(shortBuffer)
+                    }
                 }
+
+                // Проверка на превышение 1 минуты
+                if (System.currentTimeMillis() - chunkStartTime >= 60_000) {
+                    val totalAudioLen = outputFile.length() - 44
+                    writeWavHeader(outputFile, totalAudioLen, sampleRate)
+                    outputStream.close()
+
+                    // Начинаем новый чанк
+                    chunkIndex++
+                    chunkStartTime = System.currentTimeMillis()
+                    outputFile = File(context.cacheDir, "recording_${sessionId}_$chunkIndex.wav")
+                    currentFile = outputFile
+                    chunkListener?.onNewChunk(outputFile)
+                    outputStream = FileOutputStream(outputFile)
+                    outputStream.write(ByteArray(44)) // новый заголовок
+                }
+
                 delay(1)
             }
+
             endTime = System.currentTimeMillis()
             audioRecord.stop()
             audioRecord.release()
-            writeWavHeader(outputFile, totalAudioLen = outputFile.length() - 44, sampleRate)
+            val totalAudioLen = outputFile.length() - 44
+            writeWavHeader(outputFile, totalAudioLen, sampleRate)
             outputStream.close()
         }
 
@@ -134,4 +169,4 @@ class WavRecorder @Inject constructor(
         data[offset] = (value.toInt() and 0xff).toByte()
         data[offset + 1] = ((value.toInt() shr 8) and 0xff).toByte()
     }
-} 
+}

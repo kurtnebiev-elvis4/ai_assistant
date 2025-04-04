@@ -10,8 +10,5 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 object UIModule {
     @Provides
-    fun provideDatabase(): RecordingState {
-        return RecordingState.Idle
-    }
-
+    fun provideDatabase(): RecordingState = RecordingState()
 } 

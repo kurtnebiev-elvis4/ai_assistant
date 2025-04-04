@@ -1,5 +1,7 @@
 package com.mycelium.myapplication.ui.recording
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -7,6 +9,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -14,22 +18,23 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -49,7 +54,9 @@ interface RecordingScreenCallback {
 @Composable
 fun RecordingScreenPreview() {
     RecordingScreen(
-        RecordingState.Idle, PermissionState.Unknown,
+        RecordingState(time = "10:00"),
+        PermissionState.Unknown,
+        emptyList(),
         emptyList(), {}, object : RecordingScreenCallback {
             override fun stopRecording() {}
             override fun startRecording() {}
@@ -65,19 +72,20 @@ fun RecordingScreen(
     val recordingState by viewModel.provideUIState().collectAsState()
     val permissionState by viewModel.permissionState.collectAsState()
     val recordings by viewModel.recordings.collectAsState(initial = emptyList())
-    RecordingScreen(recordingState, permissionState, recordings, onRequestPermission, viewModel)
+    val waveform by viewModel.waveform.collectAsState()
+    RecordingScreen(recordingState, permissionState, waveform, recordings, onRequestPermission, viewModel)
 }
 
 @Composable
 fun RecordingScreen(
     recordingState: RecordingState,
     permissionState: PermissionState,
+    waveform: List<Short>,
     recordings: List<RecordingSession>,
     onRequestPermission: () -> Unit,
     callback: RecordingScreenCallback
 ) {
-    val isRecording = recordingState is RecordingState.Recording
-    val scale by animateFloatAsState(if (isRecording) 1.2f else 1f)
+    val scale by animateFloatAsState(if (recordingState.isRecording) 1.2f else 1f)
 
 
     Scaffold(
@@ -115,15 +123,15 @@ fun RecordingScreen(
                 )
             }
 
-            if (recordingState is RecordingState.Uploaded) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
-            }
+//            if (recordingState is RecordingState.Uploaded) {
+//                CircularProgressIndicator(
+//                    modifier = Modifier.align(Alignment.TopCenter)
+//                )
+//            }
 
-            if (recordingState is RecordingState.Error) {
+            if (recordingState.error.isNotEmpty()) {
                 Text(
-                    text = (recordingState as RecordingState.Error).message,
+                    text = recordingState.error,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
@@ -133,7 +141,10 @@ fun RecordingScreen(
 
             RecordButton(
                 Modifier.align(Alignment.BottomCenter),
-                isRecording = isRecording, callback,
+                isRecording = recordingState.isRecording,
+                recordingState.time,
+                waveform,
+                callback,
                 onRequestPermission = onRequestPermission
             )
         }
@@ -144,6 +155,8 @@ fun RecordingScreen(
 fun RecordButton(
     modifier: Modifier = Modifier,
     isRecording: Boolean,
+    time: String,
+    waveform: List<Short>,
     callback: RecordingScreenCallback,
     onRequestPermission: () -> Unit
 ) {
@@ -162,36 +175,109 @@ fun RecordButton(
             .fillMaxHeight(0.5f)
             .fillMaxWidth()
     ) {
-        Button(
+        Box(
             modifier = Modifier
                 .fillMaxWidth(0.5f)
                 .aspectRatio(1f)
-                .align(Alignment.Center).let {
+                .align(Alignment.Center)
+        ) {
+            Button(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .let {
+                        if (isRecording) {
+                            it.scale(pulsation)
+                        } else {
+                            it
+                        }
+                    },
+                onClick = {
+                    onRequestPermission()
                     if (isRecording) {
-                        it.scale(pulsation)
+                        callback.stopRecording()
                     } else {
-                        it
+                        callback.startRecording()
                     }
                 },
-            onClick = {
-                onRequestPermission()
-                if (isRecording) {
-                    callback.stopRecording()
+            ) {
+                val image = if (isRecording) {
+                    ImageVector.vectorResource(R.drawable.ic_stop)
                 } else {
-                    callback.startRecording()
+                    ImageVector.vectorResource(R.drawable.ic_mic)
                 }
-            },
-        ) {
-            val image = if (isRecording) {
-                ImageVector.vectorResource(R.drawable.ic_stop)
-            } else {
-                ImageVector.vectorResource(R.drawable.ic_mic)
+                Icon(
+                    modifier = Modifier.fillMaxSize(0.3f),
+                    imageVector = image,
+                    contentDescription = "Start Recording"
+                )
             }
-            Icon(
-                modifier = Modifier.fillMaxSize(0.3f),
-                imageVector = image,
-                contentDescription = "Start Recording"
-            )
+            WaveformDisplay(waveform, Modifier.align(Alignment.Center))
+            if (time.isNotEmpty()) {
+                Text(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 24.dp),
+                    text = time,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+@Composable
+fun WaveformDisplay(
+    waveform: List<Short>,
+    modifier: Modifier = Modifier
+) {
+    val maxSamples = 300
+    val waveformBuffer = remember { mutableStateListOf<Short>() }
+
+    LaunchedEffect(waveform) {
+        val batchSize = 128
+        val averaged = waveform.chunked(batchSize).map { chunk ->
+            (chunk.sum() /*/ chunk.size*/).toShort()
+        }
+
+        waveformBuffer.addAll(averaged)
+        while (waveformBuffer.size > maxSamples) {
+            waveformBuffer.removeFirst()
+        }
+    }
+
+    Canvas(
+        modifier = modifier
+            .fillMaxHeight(0.6f)
+            .fillMaxWidth(0.6f)
+    ) {
+        val centerY = size.height / 2
+
+        if (waveformBuffer.isEmpty()) return@Canvas
+
+        val widthPerSample = size.width / waveformBuffer.size
+
+        waveformBuffer.forEachIndexed { index, sample ->
+            val normalized = sample / Short.MAX_VALUE.toFloat()
+            val x = index * widthPerSample
+
+            if (kotlin.math.abs(normalized) < 0.2f) {
+                drawCircle(
+                    color = Color(0x44CCCCCC),
+                    center = Offset(x, centerY),
+                    radius = 1.5f
+                )
+            } else {
+                val y = (normalized * centerY)
+                drawLine(
+                    color = Color(0x88DDDDDD),
+                    start = Offset(x, centerY - y),
+                    end = Offset(x, centerY + y),
+                    strokeWidth = 2f
+                )
+            }
         }
     }
 }

@@ -5,16 +5,19 @@ import android.media.MediaRecorder
 import android.os.Build
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
-import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class AudioRecorder @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
 ) : IAudioRecorder {
     private var mediaRecorder: MediaRecorder? = null
     private var currentFile: File? = null
+
+    override var audioDataListener: AudioDataListener? = null
+    override var chunkListener: ChunkListener? = null
+
 
     override fun startRecording(sessionId: String) {
         val outputFile = File(context.cacheDir, "recording_$sessionId.mp3")
@@ -51,4 +54,6 @@ class AudioRecorder @Inject constructor(
     }
 
     override fun recordedTime(): Long = 0
+    override fun isRecording(): Boolean =
+        mediaRecorder != null
 }
