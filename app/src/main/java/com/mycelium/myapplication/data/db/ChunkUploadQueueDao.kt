@@ -13,6 +13,9 @@ interface ChunkUploadQueueDao {
     @Query("SELECT * FROM chunk_upload_queue WHERE status = :status ORDER BY createdAt ASC LIMIT 1")
     suspend fun getNextChunkToUpload(status: UploadStatus = UploadStatus.PENDING): ChunkUploadQueue?
 
+    @Query("SELECT * FROM chunk_upload_queue WHERE sessionId = :sessionId")
+    suspend fun getChunksForSession(sessionId: String): List<ChunkUploadQueue>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChunk(chunk: ChunkUploadQueue): Long
 

@@ -75,6 +75,15 @@ class RecordingRepository @Inject constructor(
                 // Get the chunk from the queue
                 val chunk = chunkUploadQueueDao.getChunksWithStatus(UploadStatus.PENDING).firstOrNull()
                     ?.firstOrNull { it.id == chunkId } ?: return@withContext
+                if (chunk.isLastChunk) {
+                    val incompleteChunks = chunkUploadQueueDao.getChunksForSession(chunk.sessionId)
+                        .filter { it.chunkIndex < chunk.chunkIndex && it.status != UploadStatus.COMPLETED }
+
+                    if (incompleteChunks.isNotEmpty()) {
+                        // Previous chunks are not all uploaded yet, skip for now
+                        return@withContext
+                    }
+                }
 
                 // Mark as in progress
                 chunkUploadQueueDao.updateChunkStatus(chunkId, UploadStatus.IN_PROGRESS)
@@ -118,7 +127,7 @@ class RecordingRepository @Inject constructor(
     }
 
     // This method can be called from a worker or service to retry failed uploads
-    suspend fun retryFailedUploads(maxRetries: Int = 3) {
+    suspend fun retryFailedUploads(maxRetries: Int = 10) {
         withContext(Dispatchers.IO) {
             val failedChunks = chunkUploadQueueDao.getChunksWithStatus(UploadStatus.FAILED).firstOrNull() ?: emptyList()
 
