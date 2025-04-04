@@ -17,7 +17,7 @@ RESULT_TYPES = {
 def chunk_file(session_id: str, chunk_index: int, file_extension: str):
     session_dir = os.path.join(UPLOAD_DIR, session_id)
     os.makedirs(session_dir, exist_ok=True)
-    chunk_filename = f"chunk_{chunk_index:06d}.{file_extension}"
+    chunk_filename = f"chunk_{chunk_index:06d}{file_extension}"
     return os.path.join(session_dir, chunk_filename)
 
 
@@ -27,7 +27,7 @@ def run_transcript_chunk_pipeline(session_id: str, chunk_index: int):
         if os.path.exists(audio_path_candidate):
             audio_path = audio_path_candidate
             break
-    transcript_path = chunk_file(session_id, chunk_index)
+    transcript_path = chunk_file(session_id, chunk_index, ".txt")
     print("Step 0 complete: Start analysis")
     # 1. Transcribe audio to text
     transcribe_audio(audio_path, transcript_path)
