@@ -19,6 +19,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,10 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mycelium.ai_meet_assistant.R
 import com.mycelium.myapplication.data.model.RecordingSession
+import com.mycelium.myapplication.data.recording.RecordState
 import common.provideUIState
 
 interface RecordingScreenCallback {
     fun stopRecording()
+    fun pauseRecording()
+    fun unpauseRecording()
     fun startRecording()
     fun deleteRecording(session: RecordingSession)
 }
@@ -69,6 +76,8 @@ fun RecordingScreenPreview() {
         emptyList(),
         emptyList(), {}, object : RecordingScreenCallback {
             override fun stopRecording() {}
+            override fun pauseRecording() {}
+            override fun unpauseRecording() {}
             override fun startRecording() {}
             override fun deleteRecording(session: RecordingSession) {}
         })
@@ -84,15 +93,17 @@ fun RecordingScreen(
     val permissionState by viewModel.permissionState.collectAsState()
     val recordings by viewModel.recordings.collectAsState(initial = emptyList())
     val waveform by viewModel.waveform.collectAsState()
-    
+
     // Implement the navigation in the callback
     val callbackWithNavigation = object : RecordingViewModelCallback {
         override fun startRecording() = viewModel.startRecording()
         override fun stopRecording() = viewModel.stopRecording()
+        override fun pauseRecording() = viewModel.pauseRecording()
+        override fun unpauseRecording() = viewModel.unpauseRecording()
         override fun deleteRecording(session: RecordingSession) = viewModel.deleteRecording(session)
         override fun navigateToResultScreen(recordingId: String) = onNavigateToResult(recordingId)
     }
-    
+
     RecordingScreen(recordingState, permissionState, waveform, recordings, onRequestPermission, callbackWithNavigation)
 }
 
@@ -138,7 +149,7 @@ fun RecordingScreen(
                     recordings = recordings,
                     onDeleteRecording = callback::deleteRecording,
                     onPlayRecording = { /* TODO: Implement playback */ },
-                    onViewResults = { recording -> 
+                    onViewResults = { recording ->
                         if (callback is RecordingViewModelCallback) {
                             callback.navigateToResultScreen(recording.id)
                         }
@@ -164,7 +175,7 @@ fun RecordingScreen(
 
             RecordButton(
                 Modifier.align(Alignment.BottomCenter),
-                isRecording = recordingState.isRecording,
+                state = recordingState.micState,
                 recordingState.time,
                 waveform,
                 callback,
@@ -177,7 +188,7 @@ fun RecordingScreen(
 @Composable
 fun RecordButton(
     modifier: Modifier = Modifier,
-    isRecording: Boolean,
+    state: RecordState,
     time: String,
     waveform: List<Short>,
     callback: RecordingScreenCallback,
@@ -208,7 +219,7 @@ fun RecordButton(
                 modifier = Modifier
                     .fillMaxSize()
                     .let {
-                        if (isRecording) {
+                        if (state == RecordState.RECORDING) {
                             it.scale(pulsation)
                         } else {
                             it
@@ -216,17 +227,18 @@ fun RecordButton(
                     },
                 onClick = {
                     onRequestPermission()
-                    if (isRecording) {
-                        callback.stopRecording()
-                    } else {
-                        callback.startRecording()
+                    when (state) {
+                        RecordState.RECORDING -> callback.pauseRecording()
+                        RecordState.PAUSED -> callback.unpauseRecording()
+                        else -> callback.startRecording()
                     }
                 },
             ) {
-                val image = if (isRecording) {
-                    ImageVector.vectorResource(R.drawable.ic_stop)
-                } else {
-                    ImageVector.vectorResource(R.drawable.ic_mic)
+
+                val image = when (state) {
+                    RecordState.PAUSED -> Icons.Filled.PlayArrow
+                    RecordState.RECORDING -> Icons.Filled.Pause
+                    else -> Icons.Filled.Mic
                 }
                 Icon(
                     modifier = Modifier.fillMaxSize(0.3f),
@@ -234,7 +246,7 @@ fun RecordButton(
                     contentDescription = "Start Recording"
                 )
             }
-            if (isRecording) {
+            if (state == RecordState.RECORDING) {
                 WaveformDisplay(waveform, Modifier.align(Alignment.Center))
             }
             if (time.isNotEmpty()) {

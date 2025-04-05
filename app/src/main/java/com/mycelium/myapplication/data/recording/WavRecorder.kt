@@ -21,20 +21,6 @@ import java.nio.ByteOrder
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class RecordState {
-    NONE,
-    INITIALIZED,
-    RECORDING,
-    PAUSED,
-    STOPPED
-}
-
-data class Chunk(
-    val sessionId: String,
-    val index: Int = 0,
-    val startTime: Long = System.currentTimeMillis(),
-    val endTime: Long = 0
-)
 
 fun Chunk.getFile(context: Context) = File(context.cacheDir, "recording_${sessionId}_$index.wav")
 
@@ -60,9 +46,7 @@ class WavRecorder @Inject constructor(
         else if (endTime == 0L) System.currentTimeMillis() - startTime
         else endTime - startTime
 
-    override fun isRecording(): Boolean =
-        audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING
-
+    override fun state(): RecordState = state
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun startRecording(sessionId: String) {

@@ -12,6 +12,7 @@ import com.mycelium.myapplication.data.recording.AudioRecorder
 import com.mycelium.myapplication.data.recording.Chunk
 import com.mycelium.myapplication.data.recording.ChunkListener
 import com.mycelium.myapplication.data.recording.IAudioRecorder
+import com.mycelium.myapplication.data.recording.RecordState
 import com.mycelium.myapplication.data.recording.WavRecorder
 import com.mycelium.myapplication.data.recording.getFile
 import com.mycelium.myapplication.data.repository.RecordingRepository
@@ -30,7 +31,7 @@ import java.io.File
 import javax.inject.Inject
 
 data class RecordingState(
-    val isRecording: Boolean = false,
+    val micState: RecordState = RecordState.NONE,
     val time: String = "",
     val error: String = ""
 )
@@ -117,14 +118,14 @@ class RecordingViewModel @Inject constructor(
                 audioRecorder?.startRecording(currentSession!!.id)
                 push(
                     uiState.copy(
-                        isRecording = true,
+                        micState = audioRecorder?.state() ?: RecordState.NONE,
                         time = audioRecorder?.recordedTime()?.formatMilliseconds().orEmpty()
                     )
                 )
             } catch (e: Exception) {
                 push(uiState.copy(error = e.message ?: "Failed to start recording"))
             }
-            while (audioRecorder?.isRecording() == true) {
+            while (audioRecorder?.state() == RecordState.RECORDING) {
                 delay(1000)
                 push(uiState.copy(time = audioRecorder?.recordedTime()?.formatMilliseconds().orEmpty()))
             }
@@ -143,20 +144,38 @@ class RecordingViewModel @Inject constructor(
             String.format("%02d:%02d", minutes, seconds)
     }
 
+    override fun unpauseRecording() {
+        audioRecorder?.resumeRecording()
+    }
+
+    override fun pauseRecording() {
+        audioRecorder?.pauseRecording()
+    }
+
     override fun stopRecording() {
         viewModelScope.launch {
             currentSession?.let { session ->
                 try {
                     audioRecorder?.stopRecording()
                     delay(100)
-                    push(uiState.copy(isRecording = false))
+                    push(uiState.copy(audioRecorder?.state() ?: RecordState.NONE))
                 } catch (e: Exception) {
-                    push(uiState.copy(isRecording = false, error = e.message ?: "Failed to stop recording"))
+                    push(
+                        uiState.copy(
+                            audioRecorder?.state() ?: RecordState.NONE,
+                            error = e.message ?: "Failed to stop recording"
+                        )
+                    )
                 }
                 try {
                     repository.finishSession(session.id)
                 } catch (e: Exception) {
-                    push(uiState.copy(isRecording = false, error = e.message ?: "Failed to finish session"))
+                    push(
+                        uiState.copy(
+                            audioRecorder?.state() ?: RecordState.NONE,
+                            error = e.message ?: "Failed to finish session"
+                        )
+                    )
                 }
             }
         }
