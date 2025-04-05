@@ -1,17 +1,12 @@
 package com.mycelium.myapplication.ui.recording
 
-import android.os.Build
-import android.util.Half.abs
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -19,15 +14,18 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,13 +38,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.mycelium.ai_meet_assistant.R
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.recording.RecordState
 import common.provideUIState
@@ -157,12 +152,6 @@ fun RecordingScreen(
                 )
             }
 
-//            if (recordingState is RecordingState.Uploaded) {
-//                CircularProgressIndicator(
-//                    modifier = Modifier.align(Alignment.TopCenter)
-//                )
-//            }
-
             if (recordingState.error.isNotEmpty()) {
                 Text(
                     text = recordingState.error,
@@ -209,6 +198,21 @@ fun RecordButton(
             .fillMaxHeight(0.5f)
             .fillMaxWidth()
     ) {
+        //            if (state in arrayOf(RecordState.RECORDING, RecordState.PAUSED)) {
+        TextButton(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            onClick = {
+                callback.stopRecording()
+            }) {
+            Icon(
+                modifier = Modifier.size(48.dp),
+                imageVector = Icons.Filled.Stop,
+                contentDescription = "Stop Recording"
+            )
+        }
+//            }
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.5f)
@@ -234,7 +238,6 @@ fun RecordButton(
                     }
                 },
             ) {
-
                 val image = when (state) {
                     RecordState.PAUSED -> Icons.Filled.PlayArrow
                     RecordState.RECORDING -> Icons.Filled.Pause

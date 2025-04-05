@@ -12,6 +12,7 @@ import com.mycelium.myapplication.data.recording.AudioRecorder
 import com.mycelium.myapplication.data.recording.Chunk
 import com.mycelium.myapplication.data.recording.ChunkListener
 import com.mycelium.myapplication.data.recording.IAudioRecorder
+import com.mycelium.myapplication.data.recording.RecordInfo
 import com.mycelium.myapplication.data.recording.RecordState
 import com.mycelium.myapplication.data.recording.WavRecorder
 import com.mycelium.myapplication.data.recording.getFile
@@ -60,7 +61,7 @@ class RecordingViewModel @Inject constructor(
 
     val recordings = repository.getAllRecordings()
 
-    private var currentSession: RecordingSession? = null
+    private var currentSession = RecordingSession()
     private var audioRecorder: IAudioRecorder? = null
 
 //    fun updatePermissionState(granted: Boolean) {
@@ -88,25 +89,34 @@ class RecordingViewModel @Inject constructor(
 //                    push(RecordingState.Error("Microphone permission not granted"))
 //                    return@launch
 //                }
-                currentSession = RecordingSession()
-                repository.insertRecording(currentSession!!)
+                currentSession = RecordingSession(
+                    startTime = System.currentTimeMillis(),
+                )
+                repository.insertRecording(currentSession)
                 audioRecorder = WavRecorder(context).apply {
                     audioDataListener = object : AudioDataListener {
                         override fun onAudioDataReceived(data: ShortArray) {
                             _waveform.value = data.toList()
                         }
+
+                        override fun recording(info: RecordInfo) {
+                            push(
+                                uiState.copy(
+                                    micState = audioRecorder?.state() ?: RecordState.NONE,
+                                    time = audioRecorder?.recordedTime()?.formatMilliseconds().orEmpty()
+                                )
+                            )
+                        }
                     }
                     chunkListener = object : ChunkListener {
                         override fun onNewChunk(chunk: Chunk) {
-                            // Could be used for real-time progress updates if needed
+                            push(uiState.copy(micState = audioRecorder?.state() ?: RecordState.NONE))
                         }
 
                         override fun onChunkFinished(chunk: Chunk) {
                             viewModelScope.launch(Dispatchers.IO) {
                                 try {
-                                    currentSession?.let { session ->
-                                        repository.uploadChunk(chunk, false)
-                                    }
+                                    repository.uploadChunk(chunk, false)
                                 } catch (e: Exception) {
                                     Log.e("RecordingViewModel", "Failed to queue chunk upload", e)
                                     // Even if there's an error adding to the queue, we'll retry later via the worker
@@ -115,7 +125,7 @@ class RecordingViewModel @Inject constructor(
                         }
                     }
                 }
-                audioRecorder?.startRecording(currentSession!!.id)
+                audioRecorder?.startRecording(currentSession.id)
                 push(
                     uiState.copy(
                         micState = audioRecorder?.state() ?: RecordState.NONE,
@@ -123,11 +133,12 @@ class RecordingViewModel @Inject constructor(
                     )
                 )
             } catch (e: Exception) {
-                push(uiState.copy(error = e.message ?: "Failed to start recording"))
-            }
-            while (audioRecorder?.state() == RecordState.RECORDING) {
-                delay(1000)
-                push(uiState.copy(time = audioRecorder?.recordedTime()?.formatMilliseconds().orEmpty()))
+                push(
+                    uiState.copy(
+                        micState = audioRecorder?.state() ?: RecordState.NONE,
+                        error = e.message ?: "Failed to start recording"
+                    )
+                )
             }
         }
     }
@@ -146,10 +157,12 @@ class RecordingViewModel @Inject constructor(
 
     override fun unpauseRecording() {
         audioRecorder?.resumeRecording()
+        push(uiState.copy(micState = audioRecorder?.state() ?: RecordState.NONE))
     }
 
     override fun pauseRecording() {
         audioRecorder?.pauseRecording()
+        push(uiState.copy(micState = audioRecorder?.state() ?: RecordState.NONE))
     }
 
     override fun stopRecording() {

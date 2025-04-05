@@ -62,6 +62,8 @@ class AudioRecorder @Inject constructor(
     }
 
     override fun recordedTime(): Long = 0
-    override fun isRecording(): Boolean =
-        mediaRecorder != null
+    override fun state(): RecordState {
+        TODO("Not yet implemented")
+    }
+
 }

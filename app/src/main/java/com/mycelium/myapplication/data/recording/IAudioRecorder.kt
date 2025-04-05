@@ -8,12 +8,19 @@ enum class RecordState {
     STOPPED
 }
 
+data class RecordInfo(
+    val time: Long,
+    val state: RecordState
+)
+
 data class Chunk(
     val sessionId: String,
     val index: Int = 0,
     val startTime: Long = System.currentTimeMillis(),
-    val endTime: Long = 0
-)
+    var endTime: Long = System.currentTimeMillis()
+) {
+    fun duration() = endTime - startTime
+}
 
 interface ChunkListener {
     fun onNewChunk(chunk: Chunk)
@@ -22,6 +29,7 @@ interface ChunkListener {
 
 interface AudioDataListener {
     fun onAudioDataReceived(data: ShortArray)
+    fun recording(info: RecordInfo)
 }
 
 interface IAudioRecorder {

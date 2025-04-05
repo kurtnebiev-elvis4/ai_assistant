@@ -9,7 +9,7 @@ import java.util.UUID
 data class RecordingSession(
     @PrimaryKey
     val id: String = UUID.randomUUID().toString(),
-    val startTime: Long = System.currentTimeMillis(),
+    val startTime: Long = 0,
     var endTime: Long? = null,
     var audioFilePath: String? = null,
     var isUploaded: Boolean = false,
