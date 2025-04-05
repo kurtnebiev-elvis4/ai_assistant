@@ -39,12 +39,16 @@ sealed class PermissionState {
     object Denied : PermissionState()
 }
 
+interface RecordingViewModelCallback : RecordingScreenCallback {
+    fun navigateToResultScreen(recordingId: String)
+}
+
 @HiltViewModel
 class RecordingViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: RecordingRepository,
     override val uiStateM: UIStateManager<RecordingState>
-) : ViewModel(), WithUIStateManger<RecordingState>, RecordingScreenCallback {
+) : ViewModel(), WithUIStateManger<RecordingState>, RecordingViewModelCallback {
     private val _permissionState = MutableStateFlow<PermissionState>(PermissionState.Unknown)
     val permissionState: StateFlow<PermissionState> = _permissionState.asStateFlow()
 
@@ -178,6 +182,10 @@ class RecordingViewModel @Inject constructor(
                 push(uiState.copy(error = e.message ?: "Failed to delete recording"))
             }
         }
+    }
+    
+    override fun navigateToResultScreen(recordingId: String) {
+        // This method will be implemented in the UI layer
     }
 
     private suspend fun uploadRecording(session: RecordingSession) {

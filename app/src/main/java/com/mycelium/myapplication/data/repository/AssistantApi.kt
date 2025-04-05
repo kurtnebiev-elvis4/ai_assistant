@@ -35,9 +35,9 @@ interface AssistantApi {
         @Path("session_id") sessionId: String
     )
 
-    @GET("download/{file_id}")
+    @GET("{session_id}/download")
     suspend fun downloadResult(
-        @Path("file_id") fileId: String,
+        @Path("session_id") sessionId: String,
         @Query("type") type: String = "transcript"
     ): Response<ResponseBody>
 

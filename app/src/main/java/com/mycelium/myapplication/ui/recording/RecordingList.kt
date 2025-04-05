@@ -20,7 +20,8 @@ import java.util.*
 fun RecordingList(
     recordings: List<RecordingSession>,
     onDeleteRecording: (RecordingSession) -> Unit,
-    onPlayRecording: (RecordingSession) -> Unit
+    onPlayRecording: (RecordingSession) -> Unit,
+    onViewResults: (RecordingSession) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -31,7 +32,8 @@ fun RecordingList(
             RecordingItem(
                 recording = recording,
                 onDelete = { onDeleteRecording(recording) },
-                onPlay = { onPlayRecording(recording) }
+                onPlay = { onPlayRecording(recording) },
+                onViewResults = { onViewResults(recording) }
             )
         }
     }
@@ -41,7 +43,8 @@ fun RecordingList(
 private fun RecordingItem(
     recording: RecordingSession,
     onDelete: () -> Unit,
-    onPlay: () -> Unit
+    onPlay: () -> Unit,
+    onViewResults: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -63,13 +66,11 @@ private fun RecordingItem(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (recording.isUploaded) {
-//                        Icon(
-//                            imageVector = Icons.Default.Upload,
-//                            contentDescription = "Uploaded",
-//                            tint = MaterialTheme.colorScheme.primary,
-//                            modifier = Modifier.size(20.dp)
-//                        )
+                    IconButton(onClick = onViewResults) {
+                        Text(
+                            text = "Results",
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                     IconButton(onClick = onPlay) {
                         Icon(

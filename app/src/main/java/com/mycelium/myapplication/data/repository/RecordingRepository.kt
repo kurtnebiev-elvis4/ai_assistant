@@ -17,8 +17,10 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.create
+import okhttp3.ResponseBody
 import retrofit2.HttpException
 import java.io.File
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -55,6 +57,32 @@ class RecordingRepository @Inject constructor(
 
     suspend fun finishSession(sessionId: String) {
         assistantApi.sessionFinished(sessionId)
+    }
+    
+    suspend fun getProcessingStatus(fileId: String): Boolean {
+        try {
+            val response = assistantApi.getStatus(fileId)
+            return if (response.isSuccessful) {
+                response.body()?.get("ready") == true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            throw e
+        }
+    }
+    
+    suspend fun downloadResult(fileId: String, resultType: String = "transcript"): String {
+        try {
+            val response = assistantApi.downloadResult(fileId, resultType)
+            if (response.isSuccessful) {
+                return response.body()?.string() ?: "No content available"
+            } else {
+                throw IOException("Failed to download result: ${response.code()}")
+            }
+        } catch (e: Exception) {
+            throw e
+        }
     }
 
     suspend fun uploadChunk(sessionId: String, chunkIndex: Int, isLastChunk: Boolean, file: File) {

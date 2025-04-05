@@ -77,13 +77,23 @@ fun RecordingScreenPreview() {
 @Composable
 fun RecordingScreen(
     viewModel: RecordingViewModel = hiltViewModel(),
-    onRequestPermission: () -> Unit
+    onRequestPermission: () -> Unit,
+    onNavigateToResult: (String) -> Unit
 ) {
     val recordingState by viewModel.provideUIState().collectAsState()
     val permissionState by viewModel.permissionState.collectAsState()
     val recordings by viewModel.recordings.collectAsState(initial = emptyList())
     val waveform by viewModel.waveform.collectAsState()
-    RecordingScreen(recordingState, permissionState, waveform, recordings, onRequestPermission, viewModel)
+    
+    // Implement the navigation in the callback
+    val callbackWithNavigation = object : RecordingViewModelCallback {
+        override fun startRecording() = viewModel.startRecording()
+        override fun stopRecording() = viewModel.stopRecording()
+        override fun deleteRecording(session: RecordingSession) = viewModel.deleteRecording(session)
+        override fun navigateToResultScreen(recordingId: String) = onNavigateToResult(recordingId)
+    }
+    
+    RecordingScreen(recordingState, permissionState, waveform, recordings, onRequestPermission, callbackWithNavigation)
 }
 
 @Composable
@@ -95,8 +105,6 @@ fun RecordingScreen(
     onRequestPermission: () -> Unit,
     callback: RecordingScreenCallback
 ) {
-    val scale by animateFloatAsState(if (recordingState.isRecording) 1.2f else 1f)
-
 
     Scaffold(
         floatingActionButton = {
@@ -129,7 +137,12 @@ fun RecordingScreen(
                 RecordingList(
                     recordings = recordings,
                     onDeleteRecording = callback::deleteRecording,
-                    onPlayRecording = { /* TODO: Implement playback */ }
+                    onPlayRecording = { /* TODO: Implement playback */ },
+                    onViewResults = { recording -> 
+                        if (callback is RecordingViewModelCallback) {
+                            callback.navigateToResultScreen(recording.id)
+                        }
+                    }
                 )
             }
 

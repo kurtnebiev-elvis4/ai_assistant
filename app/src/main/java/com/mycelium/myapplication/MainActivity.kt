@@ -7,9 +7,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.remember
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.mycelium.myapplication.data.repository.UploadChunkWorker
 import com.mycelium.myapplication.ui.recording.RecordingScreen
+import com.mycelium.myapplication.ui.recording.ResultScreen
 import com.mycelium.myapplication.ui.theme.MyApplicationTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -25,9 +32,31 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                RecordingScreen(
-                    onRequestPermission = { requestAudioPermission() }
-                )
+                val navController = rememberNavController()
+                
+                NavHost(navController = navController, startDestination = "recording") {
+                    composable("recording") {
+                        RecordingScreen(
+                            onRequestPermission = { requestAudioPermission() },
+                            onNavigateToResult = { recordingId ->
+                                navController.navigate("result/$recordingId")
+                            }
+                        )
+                    }
+                    
+                    composable(
+                        route = "result/{recordingId}",
+                        arguments = listOf(
+                            navArgument("recordingId") { type = NavType.StringType }
+                        )
+                    ) { backStackEntry ->
+                        val recordingId = backStackEntry.arguments?.getString("recordingId") ?: ""
+                        ResultScreen(
+                            recordingId = recordingId,
+                            onBackClick = { navController.popBackStack() }
+                        )
+                    }
+                }
             }
         }
         UploadChunkWorker.enqueueOneTimeUploadWorker(this)
