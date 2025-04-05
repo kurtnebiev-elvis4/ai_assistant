@@ -8,7 +8,7 @@ echo "📁 Создаём рабочую директорию"
 
 echo "📦 Обновляем систему и устанавливаем зависимости"
 apt-get update && apt-get upgrade -y
-apt-get install -y ffmpeg curl python3 python3-pip
+apt-get install -y ffmpeg curl python3 python3-pip nano
 
 echo "🐍 Устанавливаем зависимости Python"
 # Если у тебя есть requirements.txt — скопируй его в /app перед этим скриптом

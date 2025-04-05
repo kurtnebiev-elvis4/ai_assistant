@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -58,32 +59,17 @@ class RecordingRepository @Inject constructor(
     suspend fun finishSession(sessionId: String) {
         assistantApi.sessionFinished(sessionId)
     }
-    
-    suspend fun getProcessingStatus(fileId: String): Boolean {
-        try {
-            val response = assistantApi.getStatus(fileId)
-            return if (response.isSuccessful) {
-                response.body()?.get("ready") == true
-            } else {
-                false
+
+    suspend fun getProcessingStatus(fileId: String): Map<String, Boolean> =
+        assistantApi.getStatus(fileId)
+
+    fun downloadResult(fileId: String, resultType: List<String>): Flow<String> =
+        flow {
+            resultType.forEach {
+                val response = assistantApi.downloadResult(fileId, it)
+                emit(response.body()?.string() ?: "No content available")
             }
-        } catch (e: Exception) {
-            throw e
         }
-    }
-    
-    suspend fun downloadResult(fileId: String, resultType: String = "transcript"): String {
-        try {
-            val response = assistantApi.downloadResult(fileId, resultType)
-            if (response.isSuccessful) {
-                return response.body()?.string() ?: "No content available"
-            } else {
-                throw IOException("Failed to download result: ${response.code()}")
-            }
-        } catch (e: Exception) {
-            throw e
-        }
-    }
 
     suspend fun uploadChunk(sessionId: String, chunkIndex: Int, isLastChunk: Boolean, file: File) {
         // Add chunk to upload queue first

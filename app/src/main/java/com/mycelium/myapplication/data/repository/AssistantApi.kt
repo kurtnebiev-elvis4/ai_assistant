@@ -41,10 +41,10 @@ interface AssistantApi {
         @Query("type") type: String = "transcript"
     ): Response<ResponseBody>
 
-    @GET("status/{file_id}")
+    @GET("{session_id}/status")
     suspend fun getStatus(
-        @Path("file_id") fileId: String
-    ): Response<Map<String, Boolean>>
+        @Path("session_id") sessionId: String
+    ): Map<String, Boolean>
 
     @GET("types")
     suspend fun getAvailableResultTypes(): List<String>

@@ -9,6 +9,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import common.provideUIState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -17,7 +18,7 @@ fun ResultScreen(
     viewModel: ResultViewModel = hiltViewModel(),
     onBackClick: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.provideUIState().collectAsState()
     
     LaunchedEffect(recordingId) {
         viewModel.loadResultStatus(recordingId)
