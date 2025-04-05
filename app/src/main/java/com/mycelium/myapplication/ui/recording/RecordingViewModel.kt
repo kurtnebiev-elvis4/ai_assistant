@@ -34,7 +34,8 @@ import javax.inject.Inject
 data class RecordingState(
     val micState: RecordState = RecordState.NONE,
     val time: String = "",
-    val error: String = ""
+    val error: String = "",
+    val shareIntent: android.content.Intent? = null
 )
 
 sealed class PermissionState {
@@ -43,16 +44,13 @@ sealed class PermissionState {
     object Denied : PermissionState()
 }
 
-interface RecordingViewModelCallback : RecordingScreenCallback {
-    fun navigateToResultScreen(recordingId: String)
-}
 
 @HiltViewModel
 class RecordingViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: RecordingRepository,
     override val uiStateM: UIStateManager<RecordingState>
-) : ViewModel(), WithUIStateManger<RecordingState>, RecordingViewModelCallback {
+) : ViewModel(), WithUIStateManger<RecordingState>, RecordingScreenCallback {
     private val _permissionState = MutableStateFlow<PermissionState>(PermissionState.Unknown)
     val permissionState: StateFlow<PermissionState> = _permissionState.asStateFlow()
 
@@ -167,7 +165,7 @@ class RecordingViewModel @Inject constructor(
 
     override fun stopRecording() {
         viewModelScope.launch {
-            currentSession?.let { session ->
+            currentSession.let { session ->
                 try {
                     audioRecorder?.stopRecording()
                     delay(100)
@@ -207,8 +205,50 @@ class RecordingViewModel @Inject constructor(
         }
     }
 
-    override fun navigateToResultScreen(recordingId: String) {
-        // This method will be implemented in the UI layer
+    override fun shareRecordingChunks(recording: RecordingSession) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val chunks = repository.getChunksForSession(recording.id)
+                if (chunks.isEmpty()) {
+                    push(uiState.copy(error = "No chunks found for this recording"))
+                    return@launch
+                }
+                
+                // Create list of file URIs to share
+                val filePaths = chunks.map { it.filePath }.filter { File(it).exists() }
+                if (filePaths.isEmpty()) {
+                    push(uiState.copy(error = "No valid chunk files found for this recording"))
+                    return@launch
+                }
+                
+                // The actual sharing will be handled by the UI layer
+                // We just prepare the file paths and notify the UI
+                val intent = android.content.Intent().apply {
+                    action = android.content.Intent.ACTION_SEND_MULTIPLE
+                    putParcelableArrayListExtra(
+                        android.content.Intent.EXTRA_STREAM,
+                        ArrayList(filePaths.map { 
+                            androidx.core.content.FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                File(it)
+                            )
+                        })
+                    )
+                    type = "audio/wav"
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                
+                // This will be captured by the UI layer
+                push(uiState.copy(shareIntent = intent))
+            } catch (e: Exception) {
+                push(uiState.copy(error = e.message ?: "Failed to share recording chunks"))
+            }
+        }
+    }
+    
+    fun resetShareIntent() {
+        push(uiState.copy(shareIntent = null))
     }
 
     private suspend fun uploadRecording(session: RecordingSession) {

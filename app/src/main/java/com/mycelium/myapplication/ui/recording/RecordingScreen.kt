@@ -1,5 +1,7 @@
 package com.mycelium.myapplication.ui.recording
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -27,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +42,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -55,6 +57,8 @@ interface RecordingScreenCallback {
     fun unpauseRecording()
     fun startRecording()
     fun deleteRecording(session: RecordingSession)
+
+    fun shareRecordingChunks(recording: RecordingSession)
 }
 
 fun movingAverage(data: List<Short>, windowSize: Int = 5): List<Short> {
@@ -78,7 +82,8 @@ fun RecordingScreenPreview() {
             override fun unpauseRecording() {}
             override fun startRecording() {}
             override fun deleteRecording(session: RecordingSession) {}
-        })
+            override fun shareRecordingChunks(recording: RecordingSession) {}
+        }, {})
 }
 
 @Composable
@@ -92,17 +97,40 @@ fun RecordingScreen(
     val recordings by viewModel.recordings.collectAsState(initial = emptyList())
     val waveform by viewModel.waveform.collectAsState()
 
-    // Implement the navigation in the callback
-    val callbackWithNavigation = object : RecordingViewModelCallback {
-        override fun startRecording() = viewModel.startRecording()
-        override fun stopRecording() = viewModel.stopRecording()
-        override fun pauseRecording() = viewModel.pauseRecording()
-        override fun unpauseRecording() = viewModel.unpauseRecording()
-        override fun deleteRecording(session: RecordingSession) = viewModel.deleteRecording(session)
-        override fun navigateToResultScreen(recordingId: String) = onNavigateToResult(recordingId)
+    val context = LocalContext.current
+
+    val shareLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { viewModel.resetShareIntent() }
+
+    // Handle the share intent if available
+    LaunchedEffect(recordingState.shareIntent) {
+        recordingState.shareIntent?.let { intent ->
+            shareLauncher.launch(Intent.createChooser(intent, "Share Recordings"))
+        }
     }
 
-    RecordingScreen(recordingState, permissionState, waveform, recordings, onRequestPermission, callbackWithNavigation)
+
+    // Show errors as a toast if needed
+    LaunchedEffect(recordingState.error) {
+        if (recordingState.error.isNotEmpty()) {
+            android.widget.Toast.makeText(
+                context,
+                recordingState.error,
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    RecordingScreen(
+        recordingState,
+        permissionState,
+        waveform,
+        recordings,
+        onRequestPermission,
+        viewModel,
+        onNavigateToResult
+    )
 }
 
 @Composable
@@ -112,7 +140,8 @@ fun RecordingScreen(
     waveform: List<Short>,
     recordings: List<RecordingSession>,
     onRequestPermission: () -> Unit,
-    callback: RecordingScreenCallback
+    callback: RecordingScreenCallback,
+    onNavigateToResult: (String) -> Unit
 ) {
 
     Scaffold(
@@ -147,10 +176,11 @@ fun RecordingScreen(
                     recordings = recordings,
                     onDeleteRecording = callback::deleteRecording,
                     onPlayRecording = { /* TODO: Implement playback */ },
+                    onShareRecording = { recording ->
+                        callback.shareRecordingChunks(recording)
+                    },
                     onViewResults = { recording ->
-                        if (callback is RecordingViewModelCallback) {
-                            callback.navigateToResultScreen(recording.id)
-                        }
+                        onNavigateToResult(recording.id)
                     }
                 )
             }
@@ -171,7 +201,7 @@ fun RecordingScreen(
                 recordingState.time,
                 waveform,
                 callback,
-                onRequestPermission = onRequestPermission
+                onRequestPermission = onRequestPermission,
             )
         }
     }
@@ -184,7 +214,7 @@ fun RecordButton(
     time: String,
     waveform: List<Short>,
     callback: RecordingScreenCallback,
-    onRequestPermission: () -> Unit
+    onRequestPermission: () -> Unit,
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulsation by infiniteTransition.animateFloat(

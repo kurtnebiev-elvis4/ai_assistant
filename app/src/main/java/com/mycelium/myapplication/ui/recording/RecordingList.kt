@@ -23,6 +23,7 @@ fun RecordingList(
     recordings: List<RecordingSession>,
     onDeleteRecording: (RecordingSession) -> Unit,
     onPlayRecording: (RecordingSession) -> Unit,
+    onShareRecording: (RecordingSession) -> Unit,
     onViewResults: (RecordingSession) -> Unit
 ) {
     LazyColumn(
@@ -35,6 +36,7 @@ fun RecordingList(
                 recording = recording,
                 onDelete = { onDeleteRecording(recording) },
                 onPlay = { onPlayRecording(recording) },
+                onShare = { onShareRecording(recording) },
                 onViewResults = { onViewResults(recording) }
             )
         }
@@ -44,7 +46,7 @@ fun RecordingList(
 @Preview(showBackground = true)
 @Composable
 fun RecordingItemPreview() {
-    RecordingItem(RecordingSession(), {}, {}, {})
+    RecordingItem(RecordingSession(), {}, {}, {}, {})
 }
 
 @Composable
@@ -52,6 +54,7 @@ private fun RecordingItem(
     recording: RecordingSession,
     onDelete: () -> Unit,
     onPlay: () -> Unit,
+    onShare: () -> Unit,
     onViewResults: () -> Unit
 ) {
     Card(
@@ -75,10 +78,10 @@ private fun RecordingItem(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    IconButton(onClick = onPlay) {
+                    IconButton(onClick = onShare) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "Share all chunck"
+                            contentDescription = "Share all chunks"
                         )
                     }
                     IconButton(onClick = onPlay) {

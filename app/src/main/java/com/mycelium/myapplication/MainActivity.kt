@@ -7,6 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
@@ -36,12 +39,14 @@ class MainActivity : ComponentActivity() {
                 
                 NavHost(navController = navController, startDestination = "recording") {
                     composable("recording") {
-                        RecordingScreen(
+                        val recordingScreen = RecordingScreen(
                             onRequestPermission = { requestAudioPermission() },
                             onNavigateToResult = { recordingId ->
                                 navController.navigate("result/$recordingId")
                             }
                         )
+
+                        recordingScreen
                     }
                     
                     composable(

@@ -54,6 +54,9 @@ class RecordingRepository @Inject constructor(
         return recordingDao.getRecordingById(sessionId)
     }
 
+    suspend fun getChunksForSession(sessionId: String): List<ChunkUploadQueue> =
+        chunkUploadQueueDao.getChunksForSession(sessionId)
+
     suspend fun health() {
         assistantApi.checkHealth()
     }
