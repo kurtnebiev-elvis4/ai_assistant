@@ -53,9 +53,8 @@ def generate_text_chunks(prompt: str, text: str) -> str:
         input_ids = torch.cat([inputs, torch.tensor([chunk], device=model.device)], dim=1)
         outputs = model.generate(input_ids, max_new_tokens=200, do_sample=True, temperature=0.7, top_p=0.95)
         output_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        if output_text.startswith(prompt):
-            output_text = output_text[len(prompt):].lstrip()
-        full_output += output_text + "\n"
+        trimmed_output = output_text.replace(prompt, "", 1).replace(text, "", 1).lstrip()
+        full_output += trimmed_output + "\n"
 
     return full_output.strip()
 
