@@ -68,11 +68,11 @@ class RecordingRepository @Inject constructor(
     suspend fun getProcessingStatus(fileId: String): Map<String, Boolean> =
         assistantApi.getStatus(fileId)
 
-    fun downloadResult(fileId: String, resultType: List<String>): Flow<String> =
+    fun downloadResult(fileId: String, resultType: List<String>): Flow<Pair<String, String>> =
         flow {
             resultType.forEach {
                 val response = assistantApi.downloadResult(fileId, it)
-                emit(response.body()?.string() ?: "No content available")
+                emit(it to (response.body()?.string() ?: "No content available"))
             }
         }
 

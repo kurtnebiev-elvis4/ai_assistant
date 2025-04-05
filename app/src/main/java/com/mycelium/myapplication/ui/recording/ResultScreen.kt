@@ -8,10 +8,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import common.provideUIState
+
+@Preview
+@Composable
+fun ResultScreenPreview() {
+    ResultScreen(recordingId = "123", onBackClick = {})
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,13 +103,19 @@ fun ResultScreen(
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
-                    LazyColumn {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(uiState.resultText) {
+                            Text(
+                                text = it.first,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth()
+                            )
                             Card(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = it,
+                                    text = it.second,
                                     modifier = Modifier
                                         .padding(16.dp)
                                         .fillMaxWidth()

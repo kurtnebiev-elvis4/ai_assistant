@@ -15,7 +15,7 @@ import javax.inject.Inject
 data class ResultUiState(
     val isLoading: Boolean = false,
     val isProcessingComplete: Boolean = false,
-    val resultText: List<String> = emptyList(),
+    val resultText: List<Pair<String, String>> = emptyList(),
     val error: String = ""
 )
 
