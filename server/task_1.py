@@ -6,8 +6,6 @@ import gc
 
 UPLOAD_DIR = "uploads"
 
-
-
 gc.collect()
 torch.cuda.empty_cache()
 
@@ -29,16 +27,48 @@ model = AutoModelForCausalLM.from_pretrained(
 model.eval()
 
 
+def generate_text_chunks(prompt: str, text: str) -> str:
+    max_len = tokenizer.model_max_length
+    inputs = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
+    prompt_len = inputs.shape[1]
+
+    transcript_tokens = tokenizer(text, return_tensors="pt").input_ids[0]
+    chunks = []
+    current_chunk = []
+    current_len = prompt_len
+
+    for token in transcript_tokens:
+        if current_len + 1 > max_len:
+            chunks.append(current_chunk)
+            current_chunk = [token]
+            current_len = prompt_len + 1
+        else:
+            current_chunk.append(token)
+            current_len += 1
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    full_output = ""
+    for chunk in chunks:
+        input_ids = torch.cat([inputs, torch.tensor([chunk], device=model.device)], dim=1)
+        outputs = model.generate(input_ids, max_new_tokens=200, do_sample=True, temperature=0.7, top_p=0.95)
+        output_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        if output_text.startswith(prompt):
+            output_text = output_text[len(prompt):].lstrip()
+        full_output += output_text + "\n"
+
+    return full_output.strip()
+
+
 def summarize_transcript(file_id: str, transcript_path: str) -> str:
     """Generates a summary from a meeting transcript file."""
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
     lang = detect(whisper_text)
-    prompt = "Сделай краткое резюме: " if lang == "ru" else "Summarize this meeting: "
-    input_text = prompt + whisper_text
-    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(model.device)
-    outputs = model.generate(input_ids, max_new_tokens=200, do_sample=True, temperature=0.7, top_p=0.95)
-    summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    prompt = f"Summarize this meeting and respond in language {lang.upper()}:"
+
+    summary = generate_text_chunks(prompt, whisper_text)
+
     output_path = os.path.join(UPLOAD_DIR, f"{file_id}_summary.txt")
     with open(output_path, "w", encoding="utf-8") as out:
         out.write(summary)
@@ -50,11 +80,10 @@ def extract_decisions_from_transcript(file_id: str, transcript_path: str) -> lis
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
     lang = detect(whisper_text)
-    prompt = "Выдели все принятые решения на этом совещании:\n" if lang == "ru" else "List all decisions made in the following meeting:\n"
-    input_text = prompt + whisper_text
-    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(model.device)
-    outputs = model.generate(input_ids, max_new_tokens=200, do_sample=True, temperature=0.7, top_p=0.95)
-    decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    prompt = f"List all decisions made in the following meeting and respond in language {lang.upper()}:\n"
+
+    decoded_text = generate_text_chunks(prompt, whisper_text)
+
     decisions = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]
     output_path = os.path.join(UPLOAD_DIR, f"{file_id}_decisions.txt")
     with open(output_path, "w", encoding="utf-8") as out:
@@ -67,11 +96,10 @@ def extract_tasks_from_transcript(file_id: str, transcript_path: str) -> list:
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
     lang = detect(whisper_text)
-    prompt = "Перечисли задачи и действия, которые нужно выполнить после этого совещания:\n" if lang == "ru" else "List all action items and tasks discussed in this meeting:\n"
-    input_text = prompt + whisper_text
-    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(model.device)
-    outputs = model.generate(input_ids, max_new_tokens=200, do_sample=True, temperature=0.7, top_p=0.95)
-    decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    prompt = f"List all action items and tasks discussed in this meeting and respond in language {lang.upper()}:\n"
+
+    decoded_text = generate_text_chunks(prompt, whisper_text)
+
     tasks = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]
     output_path = os.path.join(UPLOAD_DIR, f"{file_id}_tasks.txt")
     with open(output_path, "w", encoding="utf-8") as out:
