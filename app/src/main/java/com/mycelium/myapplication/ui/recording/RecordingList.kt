@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -74,6 +75,12 @@ private fun RecordingItem(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    IconButton(onClick = onPlay) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share all chunck"
+                        )
+                    }
                     IconButton(onClick = onPlay) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,

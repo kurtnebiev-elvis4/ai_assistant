@@ -23,6 +23,7 @@ import javax.inject.Singleton
 
 
 fun Chunk.getFile(context: Context) = File(context.cacheDir, "recording_${sessionId}_$index.wav")
+const val MaxChunkDuration = 5 * 60_000L
 
 @Singleton
 class WavRecorder @Inject constructor(
@@ -80,7 +81,7 @@ class WavRecorder @Inject constructor(
                     delay(10)
                     continue
                 } else if (state == RecordState.RECORDING) {
-                    if (chunk == null || System.currentTimeMillis() - chunk.startTime >= /*5 * */10_000) {
+                    if (chunk == null || System.currentTimeMillis() - chunk.startTime >= MaxChunkDuration) {
                         if (chunk != null) {
                             chunkFinished(chunk, outputStream!!)
                         }
