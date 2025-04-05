@@ -57,8 +57,8 @@ interface RecordingScreenCallback {
     fun unpauseRecording()
     fun startRecording()
     fun deleteRecording(session: RecordingSession)
-
     fun shareRecordingChunks(recording: RecordingSession)
+    fun playRecording(recording: RecordingSession)
 }
 
 fun movingAverage(data: List<Short>, windowSize: Int = 5): List<Short> {
@@ -83,6 +83,7 @@ fun RecordingScreenPreview() {
             override fun startRecording() {}
             override fun deleteRecording(session: RecordingSession) {}
             override fun shareRecordingChunks(recording: RecordingSession) {}
+            override fun playRecording(recording: RecordingSession) {}
         }, {})
 }
 
@@ -175,13 +176,14 @@ fun RecordingScreen(
                 RecordingList(
                     recordings = recordings,
                     onDeleteRecording = callback::deleteRecording,
-                    onPlayRecording = { /* TODO: Implement playback */ },
+                    onPlayRecording = callback::playRecording,
                     onShareRecording = { recording ->
                         callback.shareRecordingChunks(recording)
                     },
                     onViewResults = { recording ->
                         onNavigateToResult(recording.id)
-                    }
+                    },
+                    currentPlayingSession = recordingState.currentPlayingSession
                 )
             }
 

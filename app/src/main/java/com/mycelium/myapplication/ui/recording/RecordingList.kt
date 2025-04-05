@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -12,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.mycelium.myapplication.data.model.RecordingSession
@@ -24,7 +26,8 @@ fun RecordingList(
     onDeleteRecording: (RecordingSession) -> Unit,
     onPlayRecording: (RecordingSession) -> Unit,
     onShareRecording: (RecordingSession) -> Unit,
-    onViewResults: (RecordingSession) -> Unit
+    onViewResults: (RecordingSession) -> Unit,
+    currentPlayingSession: String? = null
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -37,7 +40,8 @@ fun RecordingList(
                 onDelete = { onDeleteRecording(recording) },
                 onPlay = { onPlayRecording(recording) },
                 onShare = { onShareRecording(recording) },
-                onViewResults = { onViewResults(recording) }
+                onViewResults = { onViewResults(recording) },
+                isPlaying = currentPlayingSession == recording.id
             )
         }
     }
@@ -46,7 +50,7 @@ fun RecordingList(
 @Preview(showBackground = true)
 @Composable
 fun RecordingItemPreview() {
-    RecordingItem(RecordingSession(), {}, {}, {}, {})
+    RecordingItem(RecordingSession(), {}, {}, {}, {}, false)
 }
 
 @Composable
@@ -55,7 +59,8 @@ private fun RecordingItem(
     onDelete: () -> Unit,
     onPlay: () -> Unit,
     onShare: () -> Unit,
-    onViewResults: () -> Unit
+    onViewResults: () -> Unit,
+    isPlaying: Boolean = false
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -86,8 +91,9 @@ private fun RecordingItem(
                     }
                     IconButton(onClick = onPlay) {
                         Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Play recording"
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause recording" else "Play recording",
+                            tint = if (isPlaying) MaterialTheme.colorScheme.primary else LocalContentColor.current
                         )
                     }
                     IconButton(onClick = onDelete) {
