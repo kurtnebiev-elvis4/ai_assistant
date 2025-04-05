@@ -103,7 +103,7 @@ class RecordingViewModel @Inject constructor(
                             push(
                                 uiState.copy(
                                     micState = audioRecorder?.state() ?: RecordState.NONE,
-                                    time = audioRecorder?.recordedTime()?.formatMilliseconds().orEmpty()
+                                    time = info.time.formatMilliseconds()
                                 )
                             )
                         }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
+import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -47,6 +48,7 @@ class WavRecorder @Inject constructor(
 
     override fun state(): RecordState = state
 
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun startRecording(sessionId: String) {
         val audioRecord = AudioRecord(
@@ -57,50 +59,52 @@ class WavRecorder @Inject constructor(
             bufferSize
         )
         this.audioRecord = audioRecord
-
         val buffer = ByteArray(bufferSize)
+        chunkList.clear()
         state = RecordState.INITIALIZED
+
         GlobalScope.launch(Dispatchers.IO) {
-            var (chunk, outputStream) = createChunk(sessionId, 0)
             audioRecord.startRecording()
             state = RecordState.RECORDING
-            while (state in arrayOf(RecordState.RECORDING, RecordState.PAUSED)) {
-
+            var chunk: Chunk? = null
+            var outputStream: OutputStream? = null
+            do {
                 callOnTimePro(1000) {
-                    async {
-                        chunk.endTime = System.currentTimeMillis()
-                        audioDataListener?.recording(RecordInfo(chunkList.sumOf { it.duration() }, state))
-                    }
+                    async { audioDataListener?.recording(RecordInfo(chunkList.sumOf { it.duration() }, state)) }
                 }
-
                 if (state == RecordState.PAUSED) {
+                    if (chunk != null) {
+                        chunkFinished(chunk, outputStream!!)
+                        chunk = null
+                    }
                     delay(10)
                     continue
-                }
-                val bytesRead = audioRecord.read(buffer, 0, buffer.size)
-                if (bytesRead > 0) {
-                    outputStream.write(buffer, 0, bytesRead)
-                    async {
-                        val shortBuffer = ShortArray(bytesRead / 2)
-                        ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shortBuffer)
-//                        Log.e("AudioRecorder", "Received ${shortBuffer.size} samples")
-                        audioDataListener?.onAudioDataReceived(shortBuffer)
+                } else if (state == RecordState.RECORDING) {
+                    if (chunk == null || System.currentTimeMillis() - chunk.startTime >= /*5 * */10_000) {
+                        if (chunk != null) {
+                            chunkFinished(chunk, outputStream!!)
+                        }
+                        val nextIndex = chunkList.lastOrNull()?.index?.let { it + 1 } ?: 0
+                        createChunk(sessionId, nextIndex).let {
+                            chunk = it.first
+                            outputStream = it.second
+                        }
                     }
-                }
-
-                // Проверка на превышение 5 минуты
-                if (System.currentTimeMillis() - chunk.startTime >= 5 * 60_000) {
-                    chunkFinished(chunk, outputStream)
-
-                    // Начинаем новый чанк
-                    createChunk(sessionId, chunk.index + 1).let {
-                        chunk = it.first
-                        outputStream = it.second
+                    val bytesRead = audioRecord.read(buffer, 0, buffer.size)
+                    if (bytesRead > 0) {
+                        outputStream?.write(buffer, 0, bytesRead)
+                        async {
+                            val shortBuffer = ShortArray(bytesRead / 2)
+                            ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shortBuffer)
+                            audioDataListener?.onAudioDataReceived(shortBuffer)
+                        }
                     }
+                    chunk?.endTime = System.currentTimeMillis()
                 }
+            } while (state in arrayOf(RecordState.RECORDING, RecordState.PAUSED))
+            if (chunk != null && outputStream != null) {
+                chunkFinished(chunk, outputStream)
             }
-            chunkFinished(chunk, outputStream)
-
             endTime = System.currentTimeMillis()
             audioRecord.release()
         }
@@ -143,7 +147,7 @@ class WavRecorder @Inject constructor(
 
     private fun chunkFinished(
         chunk: Chunk,
-        outputStream: FileOutputStream,
+        outputStream: OutputStream,
     ) {
         chunk.endTime = System.currentTimeMillis()
         val outputFile = chunk.getFile(context)
@@ -202,13 +206,14 @@ class WavRecorder @Inject constructor(
         data[offset] = (value.toInt() and 0xff).toByte()
         data[offset + 1] = ((value.toInt() shr 8) and 0xff).toByte()
     }
-}
 
-private var lastCallTime = 0L
-private fun callOnTimePro(period: Long = 1000L, action: () -> Unit) {
-    val currentTime = System.currentTimeMillis()
-    if (currentTime - lastCallTime >= period) {
-        action()
-        lastCallTime = currentTime
+    private var lastCallTime = 0L
+    private suspend fun callOnTimePro(period: Long = 1000L, action: suspend () -> Unit) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastCallTime >= period) {
+            action()
+            lastCallTime = currentTime
+        }
     }
 }
+

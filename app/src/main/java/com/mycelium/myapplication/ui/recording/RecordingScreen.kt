@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
@@ -34,6 +35,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -41,6 +43,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.recording.RecordState
@@ -198,21 +201,6 @@ fun RecordButton(
             .fillMaxHeight(0.5f)
             .fillMaxWidth()
     ) {
-        //            if (state in arrayOf(RecordState.RECORDING, RecordState.PAUSED)) {
-        TextButton(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            onClick = {
-                callback.stopRecording()
-            }) {
-            Icon(
-                modifier = Modifier.size(48.dp),
-                imageVector = Icons.Filled.Stop,
-                contentDescription = "Stop Recording"
-            )
-        }
-//            }
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.5f)
@@ -244,25 +232,45 @@ fun RecordButton(
                     else -> Icons.Filled.Mic
                 }
                 Icon(
-                    modifier = Modifier.fillMaxSize(0.3f),
+                    modifier = Modifier
+                        .fillMaxSize(0.3f),
                     imageVector = image,
                     contentDescription = "Start Recording"
                 )
             }
             if (state == RecordState.RECORDING) {
-                WaveformDisplay(waveform, Modifier.align(Alignment.Center))
-            }
-            if (time.isNotEmpty()) {
-                Text(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 24.dp),
-                    text = time,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
+                WaveformDisplay(
+                    waveform, Modifier
+                        .align(Alignment.Center)
                 )
             }
-
+            if (state in arrayOf(RecordState.RECORDING, RecordState.PAUSED)) {
+                if (time.isNotEmpty()) {
+                    Text(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 24.dp),
+                        text = time,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+        if (state in arrayOf(RecordState.RECORDING, RecordState.PAUSED)) {
+            TextButton(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                onClick = {
+                    callback.stopRecording()
+                }) {
+                Icon(
+                    modifier = Modifier.size(48.dp),
+                    imageVector = Icons.Filled.Stop,
+                    contentDescription = "Stop Recording"
+                )
+            }
         }
     }
 }
@@ -295,6 +303,7 @@ fun WaveformDisplay(
         modifier = modifier
             .fillMaxHeight(0.6f)
             .fillMaxWidth(0.6f)
+            .clip(CircleShape)
     ) {
         val centerY = size.height / 2
 
