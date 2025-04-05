@@ -7,6 +7,8 @@ import com.mycelium.myapplication.data.db.RecordingDao
 import com.mycelium.myapplication.data.model.ChunkUploadQueue
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.model.UploadStatus
+import com.mycelium.myapplication.data.recording.Chunk
+import com.mycelium.myapplication.data.recording.getFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,13 +73,13 @@ class RecordingRepository @Inject constructor(
             }
         }
 
-    suspend fun uploadChunk(sessionId: String, chunkIndex: Int, isLastChunk: Boolean, file: File) {
+    suspend fun uploadChunk(chunk: Chunk, isLastChunk: Boolean) {
         // Add chunk to upload queue first
         val queueItem = ChunkUploadQueue(
-            sessionId = sessionId,
-            chunkIndex = chunkIndex,
+            sessionId = chunk.sessionId,
+            chunkIndex = chunk.index,
             isLastChunk = isLastChunk,
-            filePath = file.absolutePath,
+            filePath = chunk.getFile(context).absolutePath,
             status = UploadStatus.PENDING
         )
 

@@ -1,6 +1,8 @@
 package com.mycelium.myapplication.ui.recording
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,11 +21,11 @@ fun ResultScreen(
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.provideUIState().collectAsState()
-    
+
     LaunchedEffect(recordingId) {
         viewModel.loadResultStatus(recordingId)
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -53,6 +55,7 @@ fun ResultScreen(
                         modifier = Modifier.padding(top = 16.dp)
                     )
                 }
+
                 uiState.error.isNotBlank() -> {
                     Text(
                         text = uiState.error,
@@ -67,6 +70,7 @@ fun ResultScreen(
                         Text("Retry")
                     }
                 }
+
                 !uiState.isProcessingComplete -> {
                     Text(
                         text = "Processing in progress...",
@@ -85,23 +89,29 @@ fun ResultScreen(
                         Text("Refresh Status")
                     }
                 }
-                uiState.resultText.isNotBlank() -> {
+
+                uiState.resultText.isNotEmpty() -> {
                     Text(
                         text = "Result",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = uiState.resultText,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth()
-                        )
+                    LazyColumn {
+                        items(uiState.resultText) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = it,
+                                    modifier = Modifier
+                                        .padding(16.dp)
+                                        .fillMaxWidth()
+                                )
+                            }
+                        }
                     }
                 }
+
                 else -> {
                     Text(
                         text = "Processing complete",

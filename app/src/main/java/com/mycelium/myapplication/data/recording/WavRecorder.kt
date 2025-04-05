@@ -21,6 +21,22 @@ import java.nio.ByteOrder
 import javax.inject.Inject
 import javax.inject.Singleton
 
+enum class RecordState {
+    NONE,
+    INITIALIZED,
+    RECORDING,
+    PAUSED,
+    STOPPED
+}
+
+data class Chunk(
+    val sessionId: String,
+    val index: Int = 0,
+    val startTime: Long = System.currentTimeMillis(),
+    val endTime: Long = 0
+)
+
+fun Chunk.getFile(context: Context) = File(context.cacheDir, "recording_${sessionId}_$index.wav")
 
 @Singleton
 class WavRecorder @Inject constructor(
@@ -35,6 +51,7 @@ class WavRecorder @Inject constructor(
     val audioFormat = AudioFormat.ENCODING_PCM_16BIT
     val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
     var audioRecord: AudioRecord? = null
+    var state: RecordState = RecordState.NONE
     var startTime: Long = 0L
     var endTime: Long = 0L
 
@@ -45,6 +62,7 @@ class WavRecorder @Inject constructor(
 
     override fun isRecording(): Boolean =
         audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING
+
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun startRecording(sessionId: String) {
@@ -57,20 +75,21 @@ class WavRecorder @Inject constructor(
         )
         this.audioRecord = audioRecord
 
-        var chunkIndex = 0
-        var chunkStartTime = System.currentTimeMillis()
-        var outputFile = File(context.cacheDir, "recording_${sessionId}_$chunkIndex.wav")
-        currentFile = outputFile
-        var outputStream = FileOutputStream(outputFile)
         val buffer = ByteArray(bufferSize)
-        outputStream.write(ByteArray(44)) // WAV header placeholder
+
+        var (chunk, outputStream) = createChunk(sessionId, 0)
+
+        state = RecordState.INITIALIZED
 
         audioRecord.startRecording()
         startTime = System.currentTimeMillis()
-
-        var index = 0
         GlobalScope.launch(Dispatchers.IO) {
-            while (audioRecord.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+            state = RecordState.RECORDING
+            while (state in arrayOf(RecordState.RECORDING, RecordState.PAUSED)) {
+                if (state == RecordState.PAUSED) {
+                    delay(10)
+                    continue
+                }
                 val bytesRead = audioRecord.read(buffer, 0, buffer.size)
                 if (bytesRead > 0) {
                     outputStream.write(buffer, 0, bytesRead)
@@ -83,33 +102,47 @@ class WavRecorder @Inject constructor(
                 }
 
                 // Проверка на превышение 5 минуты
-                if (System.currentTimeMillis() - chunkStartTime >= 5 * 60_000) {
-                    chunkFinished(outputFile, outputStream, chunkIndex)
+                if (System.currentTimeMillis() - chunk.startTime >= 5 * 60_000) {
+                    chunkFinished(chunk, outputStream)
 
                     // Начинаем новый чанк
-                    chunkIndex++
-                    chunkStartTime = System.currentTimeMillis()
-                    outputFile = File(context.cacheDir, "recording_${sessionId}_$chunkIndex.wav")
-                    currentFile = outputFile
-                    chunkListener?.onNewChunk(chunkIndex, outputFile)
-                    outputStream = FileOutputStream(outputFile)
-                    outputStream.write(ByteArray(44)) // новый заголовок
+                    createChunk(sessionId, chunk.index + 1).let {
+                        chunk = it.first
+                        outputStream = it.second
+                    }
                 }
             }
-            chunkFinished(outputFile, outputStream, chunkIndex)
+            chunkFinished(chunk, outputStream)
 
             endTime = System.currentTimeMillis()
-            audioRecord.stop()
             audioRecord.release()
-            val totalAudioLen = outputFile.length() - 44
-            writeWavHeader(outputFile, totalAudioLen, sampleRate)
-            outputStream.close()
         }
     }
 
+    private fun createChunk(sessionId: String, index: Int = 0): Pair<Chunk, FileOutputStream> {
+        val chunk = Chunk(sessionId, index, System.currentTimeMillis())
+        return chunk to chunk.getFile(context).let {
+            currentFile = it
+            chunkListener?.onNewChunk(chunk)
+            FileOutputStream(it).also {
+                it.write(ByteArray(44)) // WAV header placeholder
+            }
+        }
+    }
+
+    override fun resumeRecording() {
+        audioRecord?.startRecording()
+        state = RecordState.RECORDING
+    }
+
+    override fun pauseRecording() {
+        state = RecordState.PAUSED
+        audioRecord?.stop()
+    }
 
     override fun stopRecording(): String? {
         return try {
+            state = RecordState.STOPPED
             audioRecord?.stop()
             audioRecord = null
             currentFile?.absolutePath
@@ -117,6 +150,17 @@ class WavRecorder @Inject constructor(
             e.printStackTrace()
             null
         }
+    }
+
+    private fun chunkFinished(
+        chunk: Chunk,
+        outputStream: FileOutputStream,
+    ) {
+        val outputFile = chunk.getFile(context)
+        val totalAudioLen = chunk.getFile(context).length() - 44
+        writeWavHeader(outputFile, totalAudioLen, sampleRate)
+        outputStream.close()
+        chunkListener?.onChunkFinished(chunk)
     }
 
     fun writeWavHeader(file: File, totalAudioLen: Long, sampleRate: Int) {
@@ -170,13 +214,3 @@ class WavRecorder @Inject constructor(
     }
 }
 
-private fun WavRecorder.chunkFinished(
-    outputFile: File,
-    outputStream: FileOutputStream,
-    chunkIndex: Int
-) {
-    val totalAudioLen = outputFile.length() - 44
-    writeWavHeader(outputFile, totalAudioLen, sampleRate)
-    outputStream.close()
-    chunkListener?.onChunkFinished(chunkIndex, outputFile)
-}

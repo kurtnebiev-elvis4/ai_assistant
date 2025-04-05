@@ -39,6 +39,14 @@ class AudioRecorder @Inject constructor(
         }
     }
 
+    override fun pauseRecording() {
+        TODO("Not yet implemented")
+    }
+
+    override fun resumeRecording() {
+        TODO("Not yet implemented")
+    }
+
     override fun stopRecording(): String? {
         return try {
             mediaRecorder?.apply {

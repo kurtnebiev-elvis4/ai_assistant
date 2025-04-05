@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.mycelium.myapplication.data.model.RecordingSession
 import java.text.SimpleDateFormat
@@ -39,6 +40,12 @@ fun RecordingList(
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun RecordingItemPreview() {
+    RecordingItem(RecordingSession(), {}, {}, {})
+}
+
 @Composable
 private fun RecordingItem(
     recording: RecordingSession,
@@ -48,6 +55,7 @@ private fun RecordingItem(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        onClick = onViewResults
     ) {
         Column(
             modifier = Modifier
@@ -66,12 +74,6 @@ private fun RecordingItem(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    IconButton(onClick = onViewResults) {
-                        Text(
-                            text = "Results",
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    }
                     IconButton(onClick = onPlay) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
@@ -86,9 +88,9 @@ private fun RecordingItem(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -102,9 +104,9 @@ private fun RecordingItem(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(4.dp))
-            
+
             Text(
                 text = recording.audioFilePath ?: "No audio file",
                 style = MaterialTheme.typography.bodySmall,

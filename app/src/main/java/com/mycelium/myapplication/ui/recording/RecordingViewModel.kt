@@ -9,9 +9,11 @@ import androidx.lifecycle.viewModelScope
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.recording.AudioDataListener
 import com.mycelium.myapplication.data.recording.AudioRecorder
+import com.mycelium.myapplication.data.recording.Chunk
 import com.mycelium.myapplication.data.recording.ChunkListener
 import com.mycelium.myapplication.data.recording.IAudioRecorder
 import com.mycelium.myapplication.data.recording.WavRecorder
+import com.mycelium.myapplication.data.recording.getFile
 import com.mycelium.myapplication.data.repository.RecordingRepository
 import common.push
 import common.uiState
@@ -94,17 +96,15 @@ class RecordingViewModel @Inject constructor(
                         }
                     }
                     chunkListener = object : ChunkListener {
-                        override fun onNewChunk(chunkIndex: Int, file: File) {
+                        override fun onNewChunk(chunk: Chunk) {
                             // Could be used for real-time progress updates if needed
                         }
 
-                        override fun onChunkFinished(chunkIndex: Int, file: File) {
+                        override fun onChunkFinished(chunk: Chunk) {
                             viewModelScope.launch(Dispatchers.IO) {
                                 try {
                                     currentSession?.let { session ->
-                                        // Add to queue and attempt to upload
-                                        // The isLastChunk parameter will be set to false here as this is a chunk
-                                        repository.uploadChunk(session.id, chunkIndex, false, file)
+                                        repository.uploadChunk(chunk, false)
                                     }
                                 } catch (e: Exception) {
                                     Log.e("RecordingViewModel", "Failed to queue chunk upload", e)
@@ -149,23 +149,14 @@ class RecordingViewModel @Inject constructor(
                 try {
                     audioRecorder?.stopRecording()
                     delay(100)
-                    repository.finishSession(session.id)
-//                        ?.let { filePath ->
-//                        session.audioFilePath = filePath
-//                        session.endTime = System.currentTimeMillis()
-//                        // Set file size
-//                        File(filePath).let { file ->
-//                            if (file.exists()) {
-//                                session.fileSize = file.length()
-//                            }
-//                        }
-//                        repository.updateRecording(session)
-//                        uploadRecording(session)
-//                    }
-
                     push(uiState.copy(isRecording = false))
                 } catch (e: Exception) {
-                    push(uiState.copy(error = e.message ?: "Failed to stop recording"))
+                    push(uiState.copy(isRecording = false, error = e.message ?: "Failed to stop recording"))
+                }
+                try {
+                    repository.finishSession(session.id)
+                } catch (e: Exception) {
+                    push(uiState.copy(isRecording = false, error = e.message ?: "Failed to finish session"))
                 }
             }
         }
@@ -183,7 +174,7 @@ class RecordingViewModel @Inject constructor(
             }
         }
     }
-    
+
     override fun navigateToResultScreen(recordingId: String) {
         // This method will be implemented in the UI layer
     }
