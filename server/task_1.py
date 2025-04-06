@@ -64,7 +64,7 @@ def generate_text_chunks(prompt: str, text: str) -> str:
     full_output = ""
     for chunk in chunks:
         input_ids = torch.cat([inputs, torch.tensor([chunk], device=model.device)], dim=1)
-        outputs = model.generate(input_ids, max_new_tokens=200, do_sample=True, temperature=0.7, top_p=0.95)
+        outputs = model.generate(input_ids, max_new_tokens=max_len - input_ids.shape[1], do_sample=True, temperature=0.7, top_p=0.95)
         output_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
         trimmed_output = output_text.replace(prompt, "", 1).replace(text, "", 1).lstrip()
         full_output += trimmed_output + "\n"
