@@ -3,6 +3,7 @@ package com.mycelium.myapplication.ui.recording
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mycelium.myapplication.data.repository.RecordingRepository
+import com.mycelium.myapplication.data.repository.TASKS
 import common.UIStateManager
 import common.WithUIStateManger
 import common.push
@@ -26,11 +27,15 @@ class ResultViewModel @Inject constructor(
 
 
     fun loadResultStatus(recordingId: String) {
+        downloadResult(recordingId, local = true)
         viewModelScope.launch {
             try {
                 push(uiState.copy(isLoading = true, error = ""))
 
                 val statusResponse = repository.getProcessingStatus(recordingId)
+                if(statusResponse.keys) {
+
+                }
                 if (statusResponse.any { it.value == true }) {
                     downloadResult(recordingId, statusResponse.filter { it.value }.keys.toList())
                 }
@@ -59,23 +64,24 @@ class ResultViewModel @Inject constructor(
     }
 
     fun downloadResult(
-        recordingId: String, types: List<String> = listOf("transcript", "summary", "tasks", "decisions", "ready")
+        recordingId: String, types: List<String> = TASKS,
+        local: Boolean = false
     ) {
         viewModelScope.launch {
             push(uiState.copy(isLoading = true, error = ""))
-            repository.downloadResult(recordingId, types).catch {
-                    push(
-                        uiState.copy(
-                            isLoading = false, error = "Error downloading result: ${it.message ?: "Unknown error"}"
-                        )
+            repository.downloadResult(recordingId, types, local).catch {
+                push(
+                    uiState.copy(
+                        isLoading = false, error = "Error downloading result: ${it.message ?: "Unknown error"}"
                     )
-                }.collect {
-                    push(
-                        uiState.copy(
-                            isLoading = false, resultText = uiState.resultText + it
-                        )
+                )
+            }.collect {
+                push(
+                    uiState.copy(
+                        isLoading = false, resultText = uiState.resultText + it
                     )
-                }
+                )
+            }
         }
     }
 }

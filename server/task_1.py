@@ -6,7 +6,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 from keys import UPLOAD_DIR
 
-UPLOAD_DIR = "uploads"
+PROMPT_SUMMARIZE = "Create a summary of the following meeting in language {lang}:\n"
+PROMPT_DECISIONS = "Create a list of all decisions made in the following meeting, if any, in language {lang}:\n"
+PROMPT_TASKS = "Create a list of all action items and tasks discussed in the following meeting, if any, in language {lang}:\n"
 
 gc.collect()
 torch.cuda.empty_cache()
@@ -66,7 +68,7 @@ def summarize_transcript(file_id: str, transcript_path: str) -> str:
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
     lang = detect(whisper_text)
-    prompt = f"Summarize this meeting and respond in language {lang.upper()}:"
+    prompt = PROMPT_SUMMARIZE.format(lang=lang.upper())
 
     summary = generate_text_chunks(prompt, whisper_text)
 
@@ -81,7 +83,7 @@ def extract_decisions_from_transcript(file_id: str, transcript_path: str) -> lis
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
     lang = detect(whisper_text)
-    prompt = f"List all decisions made in the following meeting and respond in language {lang.upper()}:\n"
+    prompt = PROMPT_DECISIONS.format(lang=lang.upper())
 
     decoded_text = generate_text_chunks(prompt, whisper_text)
 
@@ -97,7 +99,7 @@ def extract_tasks_from_transcript(file_id: str, transcript_path: str) -> list:
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
     lang = detect(whisper_text)
-    prompt = f"List all action items and tasks discussed in this meeting and respond in language {lang.upper()}:\n"
+    prompt = PROMPT_TASKS.format(lang=lang.upper())
 
     decoded_text = generate_text_chunks(prompt, whisper_text)
 

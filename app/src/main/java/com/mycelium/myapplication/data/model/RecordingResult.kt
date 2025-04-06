@@ -11,11 +11,11 @@ import androidx.room.PrimaryKey
         ForeignKey(
             entity = RecordingSession::class,
             parentColumns = ["id"],
-            childColumns = ["recordingId"],
+            childColumns = ["sessionId"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("recordingId")]
+    indices = [Index("sessionId")]
 )
 data class RecordingResult(
     @PrimaryKey(autoGenerate = true)

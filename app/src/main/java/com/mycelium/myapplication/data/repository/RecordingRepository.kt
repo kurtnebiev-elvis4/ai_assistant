@@ -27,6 +27,8 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
+val TASKS = listOf("transcript", "summary", "tasks", "decisions")
+
 @Singleton
 class RecordingRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -69,10 +71,14 @@ class RecordingRepository @Inject constructor(
     suspend fun getProcessingStatus(fileId: String): Map<String, Boolean> =
         assistantApi.getStatus(fileId)
 
-    fun downloadResult(sessionId: String, resultType: List<String>): Flow<Pair<String, String>> =
+    fun downloadResult(
+        sessionId: String,
+        resultType: List<String>,
+        local: Boolean = false
+    ): Flow<Pair<String, String>> =
         flow {
             val newResults = mutableListOf<RecordingResult>()
-            
+
             // Check which result types are already in the database
             val cachedResults = mutableMapOf<String, String>()
             resultType.forEach { type ->
@@ -82,20 +88,23 @@ class RecordingRepository @Inject constructor(
                     emit(type to result.content)
                 }
             }
-            
+            if(local == true) {
+                return@flow
+            }
+
             // Identify result types that need to be fetched from the API
             val missingTypes = resultType.filter { !cachedResults.containsKey(it) }
-            
+
             if (missingTypes.isEmpty()) {
                 return@flow // All results were found in the database
             }
-            
+
             // Download missing result types from the API
             missingTypes.forEach { type ->
                 try {
                     val response = assistantApi.downloadResult(sessionId, type)
                     val content = response.body()?.string() ?: "No content available"
-                    
+
                     // Save the new result to the database
                     val recordingResult = RecordingResult(
                         sessionId = sessionId,
@@ -103,24 +112,24 @@ class RecordingRepository @Inject constructor(
                         content = content
                     )
                     newResults.add(recordingResult)
-                    
+
                     // Emit the result to the flow
                     emit(type to content)
                 } catch (e: Exception) {
                     emit(type to "Error retrieving result: ${e.message}")
                 }
             }
-            
+
             // Save all new results to the database
             if (newResults.isNotEmpty()) {
                 recordingResultDao.insertResults(newResults)
             }
         }
-        
+
     fun getResultsForRecording(recordingId: String): Flow<List<RecordingResult>> {
         return recordingResultDao.getResultsForRecording(recordingId)
     }
-    
+
     suspend fun getResultByType(recordingId: String, resultType: String): RecordingResult? {
         return recordingResultDao.getResultByType(recordingId, resultType)
     }
