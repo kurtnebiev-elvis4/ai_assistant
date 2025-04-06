@@ -56,6 +56,9 @@ interface RecordingScreenCallback {
     fun pauseRecording()
     fun unpauseRecording()
     fun startRecording()
+}
+
+interface RecordListCallback {
     fun deleteRecording(session: RecordingSession)
     fun shareRecordingChunks(recording: RecordingSession)
     fun playRecording(recording: RecordingSession)
@@ -73,13 +76,17 @@ fun movingAverage(data: List<Short>, windowSize: Int = 5): List<Short> {
 @Composable
 fun RecordingScreenPreview() {
     RecordingScreen(
-        RecordingState(time = "10:00"),
-        emptyList(),
-        emptyList(), {}, object : RecordingScreenCallback {
+        recordingState = RecordingState(time = "10:00"),
+        recordListState = RecordListState(),
+        waveform = emptyList(),
+        onRequestPermission = {},
+        callback = object : RecordingScreenCallback {
             override fun stopRecording() {}
             override fun pauseRecording() {}
             override fun unpauseRecording() {}
             override fun startRecording() {}
+        },
+        listCallback = object : RecordListCallback {
             override fun deleteRecording(session: RecordingSession) {}
             override fun shareRecordingChunks(recording: RecordingSession) {}
             override fun playRecording(recording: RecordingSession) {}
@@ -89,22 +96,23 @@ fun RecordingScreenPreview() {
 @Composable
 fun RecordingScreen(
     viewModel: RecordingViewModel = hiltViewModel(),
+    listViewModel: RecordListViewModel = hiltViewModel(),
     onRequestPermission: () -> Unit,
     onNavigateToResult: (String) -> Unit
 ) {
     val recordingState by viewModel.provideUIState().collectAsState()
-    val recordings by viewModel.recordings.collectAsState(initial = emptyList())
+    val recordListState by listViewModel.provideUIState().collectAsState()
     val waveform by viewModel.waveform.collectAsState()
 
     val context = LocalContext.current
 
     val shareLauncher = rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
-    ) { viewModel.resetShareIntent() }
+    ) { listViewModel.resetShareIntent() }
 
     // Handle the share intent if available
-    LaunchedEffect(recordingState.shareIntent) {
-        recordingState.shareIntent?.let { intent ->
+    LaunchedEffect(recordListState.shareIntent) {
+        recordListState.shareIntent?.let { intent ->
             shareLauncher.launch(Intent.createChooser(intent, "Share Recordings"))
         }
     }
@@ -123,10 +131,11 @@ fun RecordingScreen(
 
     RecordingScreen(
         recordingState,
+        recordListState,
         waveform,
-        recordings,
         onRequestPermission,
         viewModel,
+        listViewModel,
         onNavigateToResult
     )
 }
@@ -134,10 +143,11 @@ fun RecordingScreen(
 @Composable
 fun RecordingScreen(
     recordingState: RecordingState,
+    recordListState: RecordListState,
     waveform: List<Short>,
-    recordings: List<RecordingSession>,
     onRequestPermission: () -> Unit,
     callback: RecordingScreenCallback,
+    listCallback: RecordListCallback,
     onNavigateToResult: (String) -> Unit
 ) {
 
@@ -152,16 +162,16 @@ fun RecordingScreen(
                 .padding(padding)
         ) {
             RecordingList(
-                recordings = recordings,
-                onDeleteRecording = callback::deleteRecording,
-                onPlayRecording = callback::playRecording,
+                recordings = recordListState.records,
+                onDeleteRecording = listCallback::deleteRecording,
+                onPlayRecording = listCallback::playRecording,
                 onShareRecording = { recording ->
-                    callback.shareRecordingChunks(recording)
+                    listCallback.shareRecordingChunks(recording)
                 },
                 onViewResults = { recording ->
                     onNavigateToResult(recording.id)
                 },
-                currentPlayingSession = recordingState.currentPlayingSession
+                currentPlayingSession = recordListState.currentPlayingSession
             )
 
             if (recordingState.error.isNotEmpty()) {

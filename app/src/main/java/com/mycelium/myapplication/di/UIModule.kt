@@ -1,5 +1,6 @@
-package com.mycelium.myapplication.ui
+package com.mycelium.myapplication.di
 
+import com.mycelium.myapplication.ui.recording.RecordListState
 import com.mycelium.myapplication.ui.recording.RecordingState
 import com.mycelium.myapplication.ui.recording.ResultUiState
 import dagger.Module
@@ -15,4 +16,7 @@ object UIModule {
 
     @Provides
     fun provideResultState(): ResultUiState = ResultUiState()
+
+    @Provides
+    fun provideRecordListState(): RecordListState = RecordListState()
 }
