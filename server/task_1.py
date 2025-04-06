@@ -6,9 +6,18 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 from keys import UPLOAD_DIR
 
-PROMPT_SUMMARIZE = "Create a summary of the following meeting in language {lang}:\n"
-PROMPT_DECISIONS = "Create a list of all decisions made in the following meeting, if any, in language {lang}:\n"
-PROMPT_TASKS = "Create a list of all action items and tasks discussed in the following meeting, if any, in language {lang}:\n"
+PROMPT_SUMMARIZE = (
+    "Instruction (in English): Create a summary of the following meeting in language {lang}.\n"
+    "Meeting transcript starts below:\n"
+)
+PROMPT_DECISIONS = (
+    "Instruction (in English): Create a list of all decisions made in the following meeting, if any, in language {lang}.\n"
+    "Meeting transcript starts below:\n"
+)
+PROMPT_TASKS = (
+    "Instruction (in English): Create a list of all action items and tasks discussed in the following meeting, if any, in language {lang}.\n"
+    "Meeting transcript starts below:\n"
+)
 
 gc.collect()
 torch.cuda.empty_cache()

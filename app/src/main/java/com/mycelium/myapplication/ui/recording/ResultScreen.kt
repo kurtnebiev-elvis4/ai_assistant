@@ -97,33 +97,7 @@ fun ResultScreen(
                     }
                 }
 
-                uiState.resultText.isNotEmpty() -> {
-                    Text(
-                        text = "Result",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(uiState.resultText) {
-                            Text(
-                                text = it.first,
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth()
-                            )
-                            Card(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = it.second,
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .fillMaxWidth()
-                                )
-                            }
-                        }
-                    }
-                }
+                uiState.resultText.isNotEmpty() -> {}
 
                 else -> {
                     Text(
@@ -136,6 +110,35 @@ fun ResultScreen(
                         modifier = Modifier.padding(top = 16.dp)
                     ) {
                         Text("Download Result")
+                    }
+                }
+            }
+            if (uiState.resultText.isNotEmpty()) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        Text(
+                            text = "Result",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+                    items(uiState.resultText.toList()) {
+                        Text(
+                            text = it.first,
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth()
+                        )
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = it.second,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }

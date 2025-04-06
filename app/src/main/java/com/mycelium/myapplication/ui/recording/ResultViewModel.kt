@@ -16,7 +16,7 @@ import javax.inject.Inject
 data class ResultUiState(
     val isLoading: Boolean = false,
     val isProcessingComplete: Boolean = false,
-    val resultText: List<Pair<String, String>> = emptyList(),
+    val resultText: Map<String, String> = emptyMap(),
     val error: String = ""
 )
 
@@ -77,7 +77,10 @@ class ResultViewModel @Inject constructor(
             }.collect {
                 push(
                     uiState.copy(
-                        isLoading = false, resultText = uiState.resultText + it
+                        isLoading = false,
+                        resultText = uiState.resultText.toMutableMap().apply {
+                            put(it.first, it.second)
+                        }
                     )
                 )
             }
