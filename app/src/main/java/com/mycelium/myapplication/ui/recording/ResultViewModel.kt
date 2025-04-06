@@ -33,11 +33,10 @@ class ResultViewModel @Inject constructor(
                 push(uiState.copy(isLoading = true, error = ""))
 
                 val statusResponse = repository.getProcessingStatus(recordingId)
-                if(statusResponse.keys) {
-
-                }
                 if (statusResponse.any { it.value == true }) {
                     downloadResult(recordingId, statusResponse.filter { it.value }.keys.toList())
+                } else {
+                    repository.finishSession(recordingId)
                 }
                 if (statusResponse.all { it.value }) {
                     push(
