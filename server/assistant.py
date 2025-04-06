@@ -5,8 +5,9 @@ import uuid
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
-from assistant_background import (run_full_analysis_pipeline, RESULT_TYPES, allowed_extensions, chunk_file,
+from assistant_background import (run_full_analysis_pipeline, chunk_file,
                                   run_transcript_chunk_pipeline)
+from keys import UPLOAD_DIR, allowed_extensions, RESULT_TYPES
 
 app = FastAPI()
 
@@ -16,9 +17,9 @@ async def health():
     return {"status": "ok"}
 
 
-# Временная папка для хранения файлов
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+@app.get("/types")
+async def get_available_result_types():
+    return list(RESULT_TYPES.keys())
 
 
 @app.post("/upload")
@@ -116,8 +117,3 @@ async def get_status(session_id: str):
     status["ready"] = all(status[result_type] for result_type in result_types)
 
     return status
-
-
-@app.get("/types")
-async def get_available_result_types():
-    return list(RESULT_TYPES.keys())

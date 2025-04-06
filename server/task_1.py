@@ -1,8 +1,10 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from langdetect import detect
-import torch
-import os
 import gc
+import os
+import torch
+from langdetect import detect
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+
+from keys import UPLOAD_DIR
 
 UPLOAD_DIR = "uploads"
 

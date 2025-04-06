@@ -1,17 +1,8 @@
-from task_0 import transcribe_audio
-from task_1 import summarize_transcript, extract_decisions_from_transcript, extract_tasks_from_transcript
 import os
 
-UPLOAD_DIR = "uploads"
-
-allowed_extensions = {".wav", ".mp3", ".flac"}
-
-RESULT_TYPES = {
-    "transcript": "",
-    "summary": "_summary",
-    "tasks": "_tasks",
-    "decisions": "_decisions"
-}
+from keys import UPLOAD_DIR, allowed_extensions
+from task_0 import transcribe_audio
+from task_1 import summarize_transcript, extract_decisions_from_transcript, extract_tasks_from_transcript
 
 
 def chunk_file(session_id: str, chunk_index: int, file_extension: str):
