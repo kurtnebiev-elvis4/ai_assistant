@@ -62,6 +62,10 @@ class WavRecorder @Inject constructor(
         this.audioRecord = audioRecord
         val buffer = ByteArray(bufferSize)
         chunkList.clear()
+        if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
+            println("AudioRecord failed to initialize")
+            return
+        }
         state = RecordState.INITIALIZED
 
         GlobalScope.launch(Dispatchers.IO) {

@@ -74,7 +74,6 @@ fun movingAverage(data: List<Short>, windowSize: Int = 5): List<Short> {
 fun RecordingScreenPreview() {
     RecordingScreen(
         RecordingState(time = "10:00"),
-        PermissionState.Unknown,
         emptyList(),
         emptyList(), {}, object : RecordingScreenCallback {
             override fun stopRecording() {}
@@ -94,7 +93,6 @@ fun RecordingScreen(
     onNavigateToResult: (String) -> Unit
 ) {
     val recordingState by viewModel.provideUIState().collectAsState()
-    val permissionState by viewModel.permissionState.collectAsState()
     val recordings by viewModel.recordings.collectAsState(initial = emptyList())
     val waveform by viewModel.waveform.collectAsState()
 
@@ -125,7 +123,6 @@ fun RecordingScreen(
 
     RecordingScreen(
         recordingState,
-        permissionState,
         waveform,
         recordings,
         onRequestPermission,
@@ -137,7 +134,6 @@ fun RecordingScreen(
 @Composable
 fun RecordingScreen(
     recordingState: RecordingState,
-    permissionState: PermissionState,
     waveform: List<Short>,
     recordings: List<RecordingSession>,
     onRequestPermission: () -> Unit,
@@ -155,13 +151,37 @@ fun RecordingScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            RecordingList(
+                recordings = recordings,
+                onDeleteRecording = callback::deleteRecording,
+                onPlayRecording = callback::playRecording,
+                onShareRecording = { recording ->
+                    callback.shareRecordingChunks(recording)
+                },
+                onViewResults = { recording ->
+                    onNavigateToResult(recording.id)
+                },
+                currentPlayingSession = recordingState.currentPlayingSession
+            )
 
-            if (permissionState == PermissionState.Denied) {
+            if (recordingState.error.isNotEmpty()) {
+                Text(
+                    text = recordingState.error,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(16.dp)
+                )
+            }
+            if (recordingState.isMicGranted == false) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxHeight(0.5f)
+                            .fillMaxWidth()
+                            .padding(16.dp)
                 ) {
                     Text(
                         text = "Microphone permission is required to record audio",
@@ -173,38 +193,15 @@ fun RecordingScreen(
                     }
                 }
             } else {
-                RecordingList(
-                    recordings = recordings,
-                    onDeleteRecording = callback::deleteRecording,
-                    onPlayRecording = callback::playRecording,
-                    onShareRecording = { recording ->
-                        callback.shareRecordingChunks(recording)
-                    },
-                    onViewResults = { recording ->
-                        onNavigateToResult(recording.id)
-                    },
-                    currentPlayingSession = recordingState.currentPlayingSession
+                RecordButton(
+                    Modifier.align(Alignment.BottomCenter),
+                    state = recordingState.micState,
+                    recordingState.time,
+                    waveform,
+                    callback,
+                    onRequestPermission = onRequestPermission,
                 )
             }
-
-            if (recordingState.error.isNotEmpty()) {
-                Text(
-                    text = recordingState.error,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(16.dp)
-                )
-            }
-
-            RecordButton(
-                Modifier.align(Alignment.BottomCenter),
-                state = recordingState.micState,
-                recordingState.time,
-                waveform,
-                callback,
-                onRequestPermission = onRequestPermission,
-            )
         }
     }
 }

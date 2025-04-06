@@ -1,28 +1,28 @@
 package com.mycelium.myapplication.ui.recording
 
+import android.Manifest
 import common.UIStateManager
 import common.WithUIStateManger
 import android.content.Context
+import android.content.pm.PackageManager
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.recording.AudioDataListener
-import com.mycelium.myapplication.data.recording.AudioRecorder
 import com.mycelium.myapplication.data.recording.Chunk
 import com.mycelium.myapplication.data.recording.ChunkListener
 import com.mycelium.myapplication.data.recording.IAudioRecorder
 import com.mycelium.myapplication.data.recording.RecordInfo
 import com.mycelium.myapplication.data.recording.RecordState
 import com.mycelium.myapplication.data.recording.WavRecorder
-import com.mycelium.myapplication.data.recording.getFile
 import com.mycelium.myapplication.data.repository.RecordingRepository
 import common.push
 import common.uiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,15 +37,9 @@ data class RecordingState(
     val error: String = "",
     val shareIntent: android.content.Intent? = null,
     val isPlaying: Boolean = false,
-    val currentPlayingSession: String? = null
+    val currentPlayingSession: String? = null,
+    val isMicGranted: Boolean = false
 )
-
-sealed class PermissionState {
-    object Unknown : PermissionState()
-    object Granted : PermissionState()
-    object Denied : PermissionState()
-}
-
 
 @HiltViewModel
 class RecordingViewModel @Inject constructor(
@@ -53,8 +47,6 @@ class RecordingViewModel @Inject constructor(
     private val repository: RecordingRepository,
     override val uiStateM: UIStateManager<RecordingState>
 ) : ViewModel(), WithUIStateManger<RecordingState>, RecordingScreenCallback {
-    private val _permissionState = MutableStateFlow<PermissionState>(PermissionState.Unknown)
-    val permissionState: StateFlow<PermissionState> = _permissionState.asStateFlow()
 
     private val _waveform = MutableStateFlow<List<Short>>(emptyList())
     val waveform: StateFlow<List<Short>> = _waveform.asStateFlow()
@@ -64,11 +56,9 @@ class RecordingViewModel @Inject constructor(
     private var currentSession = RecordingSession()
     private var audioRecorder: IAudioRecorder? = null
 
-//    fun updatePermissionState(granted: Boolean) {
-//        _permissionState.value = if (granted) PermissionState.Granted else PermissionState.Denied
-//    }
 
     init {
+        checkPermission()
         viewModelScope.launch {
             try {
                 repository.health()
@@ -82,13 +72,24 @@ class RecordingViewModel @Inject constructor(
         }
     }
 
+    fun checkPermission() =
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            push(RecordingState(isMicGranted = false, error = "Microphone permission not granted"))
+            false
+        } else {
+            push(RecordingState(isMicGranted = true))
+            true
+        }
+
+
     override fun startRecording() {
+        if (!checkPermission()) return
         viewModelScope.launch(Dispatchers.Default) {
             try {
-//                if (_permissionState.value != PermissionState.Granted) {
-//                    push(RecordingState.Error("Microphone permission not granted"))
-//                    return@launch
-//                }
                 currentSession = RecordingSession(
                     startTime = System.currentTimeMillis(),
                 )
@@ -215,21 +216,21 @@ class RecordingViewModel @Inject constructor(
                     push(uiState.copy(error = "No chunks found for this recording"))
                     return@launch
                 }
-                
+
                 // Create list of file URIs to share
                 val filePaths = chunks.map { it.filePath }.filter { File(it).exists() }
                 if (filePaths.isEmpty()) {
                     push(uiState.copy(error = "No valid chunk files found for this recording"))
                     return@launch
                 }
-                
+
                 // The actual sharing will be handled by the UI layer
                 // We just prepare the file paths and notify the UI
                 val intent = android.content.Intent().apply {
                     action = android.content.Intent.ACTION_SEND_MULTIPLE
                     putParcelableArrayListExtra(
                         android.content.Intent.EXTRA_STREAM,
-                        ArrayList(filePaths.map { 
+                        ArrayList(filePaths.map {
                             androidx.core.content.FileProvider.getUriForFile(
                                 context,
                                 "${context.packageName}.fileprovider",
@@ -240,7 +241,7 @@ class RecordingViewModel @Inject constructor(
                     type = "audio/wav"
                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                
+
                 // This will be captured by the UI layer
                 push(uiState.copy(shareIntent = intent))
             } catch (e: Exception) {
@@ -248,14 +249,14 @@ class RecordingViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun resetShareIntent() {
         push(uiState.copy(shareIntent = null))
     }
-    
+
     // Store the current media player to be able to stop it
     private var currentMediaPlayer: android.media.MediaPlayer? = null
-    
+
     override fun playRecording(recording: RecordingSession) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -264,29 +265,29 @@ class RecordingViewModel @Inject constructor(
                     stopPlayback()
                     return@launch
                 }
-                
+
                 // Stop any existing playback
                 stopPlayback()
-                
+
                 val chunks = repository.getChunksForSession(recording.id)
                 if (chunks.isEmpty()) {
                     push(uiState.copy(error = "No chunks found for this recording"))
                     return@launch
                 }
-                
+
                 // Create list of file URIs to play
                 val filePaths = chunks.map { it.filePath }.filter { File(it).exists() }
                 if (filePaths.isEmpty()) {
                     push(uiState.copy(error = "No valid chunk files found for this recording"))
                     return@launch
                 }
-                
+
                 // Create and start a media player
                 val mediaPlayer = android.media.MediaPlayer().apply {
                     setDataSource(filePaths.first())
                     prepare()
                     start()
-                    
+
                     // Set up a listener for completion to play the next chunk if available
                     var currentIndex = 0
                     setOnCompletionListener {
@@ -312,13 +313,13 @@ class RecordingViewModel @Inject constructor(
                         }
                     }
                 }
-                
+
                 // Store the media player for future reference
                 currentMediaPlayer = mediaPlayer
-                
+
                 // Update UI state indicating playback is happening
                 push(uiState.copy(isPlaying = true, currentPlayingSession = recording.id))
-                
+
                 // When the MediaPlayer is released, update the UI
                 mediaPlayer.setOnErrorListener { _, _, _ ->
                     currentMediaPlayer = null
@@ -327,11 +328,17 @@ class RecordingViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 currentMediaPlayer = null
-                push(uiState.copy(error = e.message ?: "Failed to play recording", isPlaying = false, currentPlayingSession = null))
+                push(
+                    uiState.copy(
+                        error = e.message ?: "Failed to play recording",
+                        isPlaying = false,
+                        currentPlayingSession = null
+                    )
+                )
             }
         }
     }
-    
+
     private fun stopPlayback() {
         currentMediaPlayer?.let {
             try {
@@ -346,7 +353,7 @@ class RecordingViewModel @Inject constructor(
             }
         }
     }
-    
+
     override fun onCleared() {
         super.onCleared()
         stopPlayback()
