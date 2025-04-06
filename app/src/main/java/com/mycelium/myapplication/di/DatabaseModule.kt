@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.mycelium.myapplication.data.db.ChunkUploadQueueDao
 import com.mycelium.myapplication.data.db.RecordingDatabase
 import com.mycelium.myapplication.data.db.RecordingDao
+import com.mycelium.myapplication.data.db.RecordingResultDao
 import com.mycelium.myapplication.data.repository.AssistantApi
 import com.mycelium.myapplication.data.repository.RecordingRepository
 import dagger.Module
@@ -33,15 +34,18 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideRecordingDao(database: RecordingDatabase): RecordingDao {
-        return database.recordingDao()
-    }
+    fun provideRecordingDao(database: RecordingDatabase): RecordingDao =
+        database.recordingDao()
 
     @Provides
     @Singleton
-    fun provideChunkUploadQueueDao(database: RecordingDatabase): ChunkUploadQueueDao {
-        return database.chunkUploadQueueDao()
-    }
+    fun provideChunkUploadQueueDao(database: RecordingDatabase): ChunkUploadQueueDao =
+        database.chunkUploadQueueDao()
+
+    @Provides
+    @Singleton
+    fun provideRecordingResultDao(database: RecordingDatabase): RecordingResultDao =
+        database.recordingResultDao()
 
 //    @Provides
 //    @Singleton

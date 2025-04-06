@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.core.net.toUri
 import com.mycelium.myapplication.data.db.ChunkUploadQueueDao
 import com.mycelium.myapplication.data.db.RecordingDao
+import com.mycelium.myapplication.data.db.RecordingResultDao
 import com.mycelium.myapplication.data.model.ChunkUploadQueue
+import com.mycelium.myapplication.data.model.RecordingResult
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.model.UploadStatus
 import com.mycelium.myapplication.data.recording.Chunk
@@ -20,10 +22,8 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.create
-import okhttp3.ResponseBody
 import retrofit2.HttpException
 import java.io.File
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,6 +32,7 @@ class RecordingRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val recordingDao: RecordingDao,
     private val chunkUploadQueueDao: ChunkUploadQueueDao,
+    private val recordingResultDao: RecordingResultDao,
     private val assistantApi: AssistantApi
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
@@ -68,13 +69,61 @@ class RecordingRepository @Inject constructor(
     suspend fun getProcessingStatus(fileId: String): Map<String, Boolean> =
         assistantApi.getStatus(fileId)
 
-    fun downloadResult(fileId: String, resultType: List<String>): Flow<Pair<String, String>> =
+    fun downloadResult(sessionId: String, resultType: List<String>): Flow<Pair<String, String>> =
         flow {
-            resultType.forEach {
-                val response = assistantApi.downloadResult(fileId, it)
-                emit(it to (response.body()?.string() ?: "No content available"))
+            val newResults = mutableListOf<RecordingResult>()
+            
+            // Check which result types are already in the database
+            val cachedResults = mutableMapOf<String, String>()
+            resultType.forEach { type ->
+                val result = recordingResultDao.getResultByType(sessionId, type)
+                if (result != null) {
+                    cachedResults[type] = result.content
+                    emit(type to result.content)
+                }
+            }
+            
+            // Identify result types that need to be fetched from the API
+            val missingTypes = resultType.filter { !cachedResults.containsKey(it) }
+            
+            if (missingTypes.isEmpty()) {
+                return@flow // All results were found in the database
+            }
+            
+            // Download missing result types from the API
+            missingTypes.forEach { type ->
+                try {
+                    val response = assistantApi.downloadResult(sessionId, type)
+                    val content = response.body()?.string() ?: "No content available"
+                    
+                    // Save the new result to the database
+                    val recordingResult = RecordingResult(
+                        sessionId = sessionId,
+                        resultType = type,
+                        content = content
+                    )
+                    newResults.add(recordingResult)
+                    
+                    // Emit the result to the flow
+                    emit(type to content)
+                } catch (e: Exception) {
+                    emit(type to "Error retrieving result: ${e.message}")
+                }
+            }
+            
+            // Save all new results to the database
+            if (newResults.isNotEmpty()) {
+                recordingResultDao.insertResults(newResults)
             }
         }
+        
+    fun getResultsForRecording(recordingId: String): Flow<List<RecordingResult>> {
+        return recordingResultDao.getResultsForRecording(recordingId)
+    }
+    
+    suspend fun getResultByType(recordingId: String, resultType: String): RecordingResult? {
+        return recordingResultDao.getResultByType(recordingId, resultType)
+    }
 
     suspend fun uploadChunk(chunk: Chunk, isLastChunk: Boolean) {
         // Add chunk to upload queue first
