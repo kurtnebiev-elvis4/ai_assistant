@@ -6,15 +6,18 @@ import torch
 from keys import UPLOAD_DIR
 
 PROMPT_SUMMARIZE = (
-    "Instruction (in English): Create a summary of the following meeting in language {lang}.\n"
+    "Instruction (in English): Create a focused summary of the following meeting. Use the same language as the transcript. "
+    "Ensure clarity, avoid repetitive phrasing, and use natural sentence structure.\n"
     "Meeting transcript starts below:\n"
 )
 PROMPT_DECISIONS = (
-    "Instruction (in English): Create a list of all decisions made in the following meeting, if any, in language {lang}.\n"
+    "Instruction (in English): Identify and list all decisions made in the following meeting, if any. "
+    "Use the same language as the transcript. Avoid repeating phrases and ensure clarity.\n"
     "Meeting transcript starts below:\n"
 )
 PROMPT_TASKS = (
-    "Instruction (in English): Create a list of all action items and tasks discussed in the following meeting, if any, in language {lang}.\n"
+    "Instruction (in English): Identify and list all action items and tasks discussed in the following meeting, if any. "
+    "Use the same language as the transcript. Avoid redundancy and use clear, natural language.\n"
     "Meeting transcript starts below:\n"
 )
 
