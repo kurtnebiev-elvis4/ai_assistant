@@ -1,8 +1,8 @@
 import gc
 import os
-import torch
+from ai_model import model, tokenizer
 from langdetect import detect
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+import torch
 
 from keys import UPLOAD_DIR
 
@@ -18,26 +18,6 @@ PROMPT_TASKS = (
     "Instruction (in English): Create a list of all action items and tasks discussed in the following meeting, if any, in language {lang}.\n"
     "Meeting transcript starts below:\n"
 )
-
-gc.collect()
-torch.cuda.empty_cache()
-
-# Загрузка Qwen 14B (Distill)
-model_id = "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.float16
-)
-tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(
-    model_id,
-    device_map="auto",
-    quantization_config=bnb_config,
-    trust_remote_code=True
-)
-model.eval()
 
 
 def generate_text_chunks(prompt: str, text: str) -> str:

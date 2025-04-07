@@ -2,8 +2,9 @@ import asyncio
 import os
 import soundfile as sf
 import uuid
-from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
+from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect, WebSocketException
 from fastapi.responses import FileResponse, JSONResponse
+from chat_bot import chat_with_deepseek
 
 from assistant_background import (run_full_analysis_pipeline, chunk_file,
                                   run_transcript_chunk_pipeline)
@@ -117,3 +118,18 @@ async def get_status(session_id: str):
     status["ready"] = all(status[result_type] for result_type in result_types)
 
     return status
+
+
+@app.websocket("/ws/{session_id}")
+async def websocket_endpoint(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_text()
+            response = chat_with_deepseek(data, user_id=session_id)
+            await websocket.send_text(response)
+    except WebSocketDisconnect:
+        print(f"WebSocket disconnected: {session_id}")
+    except WebSocketException as e:
+        await websocket.close(code=1003)
+        print(f"WebSocket exception: {e}")
