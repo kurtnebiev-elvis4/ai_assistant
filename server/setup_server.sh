@@ -14,6 +14,7 @@ echo "🐍 Устанавливаем зависимости Python"
 # Если у тебя есть requirements.txt — скопируй его в /app перед этим скриптом
 pip3 install --upgrade pip
 pip3 install -r requirements.txt
+pip3 install flash-attn --no-build-isolation
 
 echo "📦 Устанавливаем FastAPI и Uvicorn (на всякий случай)"
 pip3 install fastapi uvicorn

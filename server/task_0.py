@@ -7,7 +7,10 @@ torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 model_id = "openai/whisper-large-v3-turbo"
 
 model = AutoModelForSpeechSeq2Seq.from_pretrained(
-    model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True
+    model_id, torch_dtype=torch_dtype,
+    low_cpu_mem_usage=True,
+    use_safetensors=True,
+    attn_implementation="flash_attention_2"
 )
 model.to(device)
 
@@ -25,9 +28,10 @@ pipe = pipeline(
     return_timestamps=True
 )
 
+
 def transcribe_audio(input_path: str, output_path: str):
     try:
-        result = pipe(input_path)
+        result = pipe(input_path, return_timestamps=True)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(result["text"])
             print(f"Transcription finished")
