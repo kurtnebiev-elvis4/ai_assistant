@@ -5,8 +5,12 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.os.PowerManager
+import android.util.Log
 import androidx.annotation.RequiresPermission
+import androidx.lifecycle.LifecycleCoroutineScope
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
@@ -69,8 +73,13 @@ class WavRecorder @Inject constructor(
         state = RecordState.INITIALIZED
 
         GlobalScope.launch(Dispatchers.IO) {
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            val wakeLock = powerManager.newWakeLock(PowerManager.FULL_WAKE_LOCK, "MyApp::AudioRecordingLock")
+            wakeLock.acquire()
+
             audioRecord.startRecording()
             state = RecordState.RECORDING
+
             var chunk: Chunk? = null
             var outputStream: OutputStream? = null
             do {
@@ -79,7 +88,7 @@ class WavRecorder @Inject constructor(
                 }
                 if (state == RecordState.PAUSED) {
                     if (chunk != null) {
-                        chunkFinished(chunk, outputStream!!)
+                        chunkFinishedAsync(chunk, outputStream!!)
                         chunk = null
                     }
                     delay(10)
@@ -87,7 +96,7 @@ class WavRecorder @Inject constructor(
                 } else if (state == RecordState.RECORDING) {
                     if (chunk == null || System.currentTimeMillis() - chunk.startTime >= MaxChunkDuration) {
                         if (chunk != null) {
-                            chunkFinished(chunk, outputStream!!)
+                            chunkFinishedAsync(chunk, outputStream!!)
                         }
                         val nextIndex = chunkList.lastOrNull()?.index?.let { it + 1 } ?: 0
                         createChunk(sessionId, nextIndex).let {
@@ -96,6 +105,8 @@ class WavRecorder @Inject constructor(
                         }
                     }
                     val bytesRead = audioRecord.read(buffer, 0, buffer.size)
+                    Log.e("!!!!AudioRecorder", "bytesRead: ${buffer.joinToString()}" )
+                    Log.e("!!!!AudioRecorder", "wakeLock.isHeld: ${wakeLock.isHeld}" )
                     if (bytesRead > 0) {
                         outputStream?.write(buffer, 0, bytesRead)
                         async {
@@ -108,20 +119,23 @@ class WavRecorder @Inject constructor(
                 }
             } while (state in arrayOf(RecordState.RECORDING, RecordState.PAUSED))
             if (chunk != null && outputStream != null) {
-                chunkFinished(chunk, outputStream)
+                chunkFinishedAsync(chunk, outputStream)
             }
             endTime = System.currentTimeMillis()
             audioRecord.release()
+            wakeLock.release()
         }
     }
 
     private val chunkList = mutableListOf<Chunk>()
-    private fun createChunk(sessionId: String, index: Int = 0): Pair<Chunk, FileOutputStream> {
+    private fun CoroutineScope.createChunk(sessionId: String, index: Int = 0): Pair<Chunk, FileOutputStream> {
         val chunk = Chunk(sessionId, index, System.currentTimeMillis())
         chunkList.add(chunk)
         return chunk to chunk.getFile(context).let {
             currentFile = it
-            chunkListener?.onNewChunk(chunk)
+            async {
+                chunkListener?.onNewChunk(chunk)
+            }
             FileOutputStream(it).also {
                 it.write(ByteArray(44)) // WAV header placeholder
             }
@@ -150,7 +164,7 @@ class WavRecorder @Inject constructor(
         }
     }
 
-    private fun chunkFinished(
+    private fun CoroutineScope.chunkFinishedAsync(
         chunk: Chunk,
         outputStream: OutputStream,
     ) {
@@ -159,7 +173,9 @@ class WavRecorder @Inject constructor(
         val totalAudioLen = chunk.getFile(context).length() - 44
         writeWavHeader(outputFile, totalAudioLen, sampleRate)
         outputStream.close()
-        chunkListener?.onChunkFinished(chunk)
+        async {
+            chunkListener?.onChunkFinished(chunk)
+        }
     }
 
     fun writeWavHeader(file: File, totalAudioLen: Long, sampleRate: Int) {
