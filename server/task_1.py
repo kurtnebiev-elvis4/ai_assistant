@@ -1,4 +1,3 @@
-import gc
 import os
 from ai_model import model, tokenizer
 from langdetect import detect
