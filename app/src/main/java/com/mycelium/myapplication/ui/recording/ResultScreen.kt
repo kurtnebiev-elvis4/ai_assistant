@@ -1,5 +1,6 @@
 package com.mycelium.myapplication.ui.recording
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -131,15 +132,42 @@ fun ResultScreen(
                                 .padding(16.dp)
                                 .fillMaxWidth()
                         )
+
+                        val parts = it.second.split("</think>", limit = 2)
+                        val (collapsiblePart, visiblePart) = if (parts.size == 2) parts[0] to parts[1] else "" to it.second
+                        var expanded by remember { mutableStateOf(false) }
+
                         Card(
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateContentSize()
                         ) {
-                            Text(
-                                text = it.second,
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth()
-                            )
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                if (collapsiblePart.isNotBlank()) {
+                                    TextButton(onClick = { expanded = !expanded }) {
+                                        Text(if (expanded) "Скрыть размышления" else "Показать размышления")
+                                    }
+                                    if (expanded) {
+                                        Text(
+                                            text = collapsiblePart.trim(),
+                                            modifier = Modifier
+                                                .padding(top = 8.dp)
+                                                .fillMaxWidth()
+                                        )
+                                        HorizontalDivider(
+                                            modifier = Modifier
+                                                .padding(vertical = 8.dp)
+                                                .fillMaxWidth()
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = visiblePart.trim(),
+                                    modifier = Modifier
+                                        .padding(top = 8.dp)
+                                        .fillMaxWidth()
+                                )
+                            }
                         }
                     }
                 }
