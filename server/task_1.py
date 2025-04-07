@@ -2,20 +2,33 @@ import os
 from ai_model import model, tokenizer
 from langdetect import detect
 import torch
+from datetime import date
 
-from keys import UPLOAD_DIR
+CURRENT_DATE = date.today().isoformat()
 
 PROMPT_SUMMARIZE = (
+    f"Current date: {CURRENT_DATE}\n"
+    f"Language of the transcript: {{lang}}\n"
+    "Audience: Internal team.\n"
+    "Format: Paragraph style with clear, natural language.\n"
     "Instruction (in English): Create a focused summary of the following meeting. Use the same language as the transcript. "
     "Ensure clarity, avoid repetitive phrasing, and use natural sentence structure.\n"
     "Meeting transcript starts below:\n"
 )
 PROMPT_DECISIONS = (
+    f"Current date: {CURRENT_DATE}\n"
+    f"Language of the transcript: {{lang}}\n"
+    "Audience: Internal team.\n"
+    "Format: Paragraph style with clear, natural language.\n"
     "Instruction (in English): Identify and list all decisions made in the following meeting, if any. "
     "Use the same language as the transcript. Avoid repeating phrases and ensure clarity.\n"
     "Meeting transcript starts below:\n"
 )
 PROMPT_TASKS = (
+    f"Current date: {CURRENT_DATE}\n"
+    f"Language of the transcript: {{lang}}\n"
+    "Audience: Internal team.\n"
+    "Format: Paragraph style with clear, natural language.\n"
     "Instruction (in English): Identify and list all action items and tasks discussed in the following meeting, if any. "
     "Use the same language as the transcript. Avoid redundancy and use clear, natural language.\n"
     "Meeting transcript starts below:\n"
