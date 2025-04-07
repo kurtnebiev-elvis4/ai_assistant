@@ -123,6 +123,12 @@ async def get_status(session_id: str):
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
+    api_key = websocket.headers.get("x-api-key")
+    # if api_key != os.getenv("API_KEY"):
+    if api_key != "test-api-key":
+        await websocket.close(code=1008)  # Policy Violation
+        print(f"Unauthorized WebSocket connection attempt for session: {session_id}")
+        return
     try:
         while True:
             data = await websocket.receive_text()
