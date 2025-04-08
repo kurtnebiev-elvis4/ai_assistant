@@ -62,6 +62,7 @@ interface RecordListCallback {
     fun deleteRecording(session: RecordingSession)
     fun shareRecordingChunks(recording: RecordingSession)
     fun playRecording(recording: RecordingSession)
+    fun toggleChunksView(recording: RecordingSession)
 }
 
 fun movingAverage(data: List<Short>, windowSize: Int = 5): List<Short> {
@@ -90,6 +91,7 @@ fun RecordingScreenPreview() {
             override fun deleteRecording(session: RecordingSession) {}
             override fun shareRecordingChunks(recording: RecordingSession) {}
             override fun playRecording(recording: RecordingSession) {}
+            override fun toggleChunksView(recording: RecordingSession) {}
         }, {})
 }
 
@@ -171,7 +173,9 @@ fun RecordingScreen(
                 onViewResults = { recording ->
                     onNavigateToResult(recording.id)
                 },
-                currentPlayingSession = recordListState.currentPlayingSession
+                onToggleChunksView = listCallback::toggleChunksView,
+                currentPlayingSession = recordListState.currentPlayingSession,
+                chunksMap = recordListState.chunksMap
             )
 
             if (recordingState.error.isNotEmpty()) {

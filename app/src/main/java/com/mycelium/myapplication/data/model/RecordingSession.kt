@@ -8,12 +8,15 @@ import java.util.UUID
 @Entity(tableName = "recording_sessions")
 data class RecordingSession(
     @PrimaryKey
-    val id: String = UUID.randomUUID().toString(),
-    val startTime: Long = 0,
+    var id: String = UUID.randomUUID().toString(),
+    var startTime: Long = 0,
     var endTime: Long? = null,
     var audioFilePath: String? = null,
     var isUploaded: Boolean = false,
-    var fileSize: Long = 0
+    var fileSize: Long = 0,
+    // This field is not persisted in the database - transient field for UI state
+    @androidx.room.Ignore
+    var showChunks: Boolean = false
 ) {
     val duration: Long
         get() = endTime?.let { it - startTime } ?: 0L

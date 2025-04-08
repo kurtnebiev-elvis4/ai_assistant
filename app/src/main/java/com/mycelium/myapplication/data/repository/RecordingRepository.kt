@@ -208,7 +208,7 @@ class RecordingRepository @Inject constructor(
     }
 
     // This method can be called from a worker or service to retry failed uploads
-    suspend fun retryFailedUploads(maxRetries: Int = 10) {
+    suspend fun retryFailedUploads(maxRetries: Int = 10000) {
         withContext(Dispatchers.IO) {
             val failedChunks = chunkUploadQueueDao.getChunksWithStatus(UploadStatus.FAILED).firstOrNull() ?: emptyList()
 
