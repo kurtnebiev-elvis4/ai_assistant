@@ -4,6 +4,7 @@ from langdetect import detect
 import torch
 import threading
 from datetime import date
+from keys import UPLOAD_DIR
 
 CURRENT_DATE = date.today().isoformat()
 model_lock = threading.Lock()

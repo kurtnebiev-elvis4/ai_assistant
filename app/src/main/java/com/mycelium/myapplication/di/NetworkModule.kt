@@ -29,7 +29,8 @@ object NetworkModule {
             .addInterceptor(logging)
             .build()
 
-        val runpodId = "pn8vl8jb7ugske"
+        val runpodId = "909qwv684lqjq7"
+//        val runpodId = "pn8vl8jb7ugske"
 //        val runpodId = "u9xt9rn2ib2p1i"
         val port = 8000
         val server = "https://$runpodId-$port.proxy.runpod.net/"
