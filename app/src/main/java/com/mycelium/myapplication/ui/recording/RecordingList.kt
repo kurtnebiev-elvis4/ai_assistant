@@ -1,9 +1,11 @@
 package com.mycelium.myapplication.ui.recording
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
@@ -159,13 +161,65 @@ private fun RecordingItem(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Audio file path
-            Text(
-                text = recording.audioFilePath ?: "No audio file",
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            // Chunks summary
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Show chunk upload status summary
+                val totalChunks = recording.chunks.size
+                val completedChunks = recording.chunks.count { it.status == UploadStatus.COMPLETED }
+                val pendingChunks = recording.chunks.count { it.status == UploadStatus.PENDING }
+                val inProgressChunks = recording.chunks.count { it.status == UploadStatus.IN_PROGRESS }
+                val failedChunks = recording.chunks.count { it.status == UploadStatus.FAILED }
+                
+                Text(
+                    text = if (totalChunks > 0) {
+                        "Chunks: $completedChunks/$totalChunks uploaded" +
+                        if (failedChunks > 0) " • $failedChunks failed" else ""
+                    } else {
+                        "No chunks"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                // Show indicator dots for chunk status
+                if (totalChunks > 0) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (completedChunks > 0) {
+                            StatusDot(
+                                color = MaterialTheme.colorScheme.secondary,
+                                count = completedChunks
+                            )
+                        }
+                        if (inProgressChunks > 0) {
+                            StatusDot(
+                                color = MaterialTheme.colorScheme.primary,
+                                count = inProgressChunks
+                            )
+                        }
+                        if (pendingChunks > 0) {
+                            StatusDot(
+                                color = MaterialTheme.colorScheme.tertiary,
+                                count = pendingChunks
+                            )
+                        }
+                        if (failedChunks > 0) {
+                            StatusDot(
+                                color = MaterialTheme.colorScheme.error,
+                                count = failedChunks
+                            )
+                        }
+                    }
+                }
+            }
             IconButton(
                 onClick = onToggleChunksView,
                 modifier = Modifier.align(Alignment.End)
@@ -250,6 +304,27 @@ private fun ChunkStatusBadge(status: UploadStatus) {
             color = color,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         )
+    }
+}
+
+@Composable
+private fun StatusDot(color: androidx.compose.ui.graphics.Color, count: Int = 1) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(color, CircleShape)
+        )
+        if (count > 1) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.bodySmall,
+                color = color
+            )
+        }
     }
 }
 

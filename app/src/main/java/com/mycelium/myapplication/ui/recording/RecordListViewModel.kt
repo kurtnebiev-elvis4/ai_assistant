@@ -43,19 +43,26 @@ class RecordListViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.Default) {
             repository.getAllRecordings().collect { recordings ->
                 val updatedChunksMap = mutableMapOf<String, List<ChunkUploadQueue>>()
+                val updatedRecordings = recordings.toMutableList()
                 
-                // Load chunks for all recordings that have showChunks=true
-                recordings.filter { it.showChunks }.forEach { recording ->
+                // Load chunks for all recordings
+                updatedRecordings.forEach { recording ->
                     try {
                         val chunks = repository.getChunksForSession(recording.id)
-                        updatedChunksMap[recording.id] = chunks
+                        // Store in map for UI visibility control
+                        if (recording.showChunks) {
+                            updatedChunksMap[recording.id] = chunks
+                        }
+                        
+                        // Also set the chunks in the recording object for calculations
+                        recording.chunks = chunks
                     } catch (e: Exception) {
                         Log.e("RecordListViewModel", "Failed to load chunks for session ${recording.id}", e)
                     }
                 }
                 
                 push(uiState.copy(
-                    records = recordings,
+                    records = updatedRecordings,
                     chunksMap = updatedChunksMap
                 ))
             }
@@ -69,37 +76,41 @@ class RecordListViewModel @Inject constructor(
 
     override fun toggleChunksView(recording: RecordingSession) {
         viewModelScope.launch {
-            // Create a copy of the recordings list 
-            val updatedRecords = uiState.records.map { rec ->
-                if (rec.id == recording.id) {
-                    // Toggle the showChunks flag for the selected recording
-                    rec.copy(showChunks = !rec.showChunks)
+            // Create a mutable copy of the recordings list 
+            val updatedRecords = uiState.records.toMutableList()
+            
+            // Find and update the target recording
+            val targetIndex = updatedRecords.indexOfFirst { it.id == recording.id }
+            if (targetIndex >= 0) {
+                val targetRecording = updatedRecords[targetIndex]
+                // Toggle the showChunks flag for the selected recording
+                targetRecording.showChunks = !targetRecording.showChunks
+                
+                // Make a copy of the chunksMap
+                val updatedChunksMap = uiState.chunksMap.toMutableMap()
+                
+                if (targetRecording.showChunks) {
+                    // If we're showing chunks, ensure they're loaded
+                    try {
+                        val chunks = repository.getChunksForSession(recording.id)
+                        updatedChunksMap[recording.id] = chunks
+                        
+                        // Also update the chunks in the recording object for calculations
+                        targetRecording.chunks = chunks
+                    } catch (e: Exception) {
+                        Log.e("RecordListViewModel", "Failed to load chunks for session ${recording.id}", e)
+                    }
                 } else {
-                    rec
+                    // We're hiding chunks, so remove them from the map to save memory
+                    updatedChunksMap.remove(recording.id)
+                    // But keep the chunks in the recording object for calculations
                 }
+                
+                push(uiState.copy(
+                    records = updatedRecords,
+                    chunksMap = updatedChunksMap
+                ))
             }
-            
-            // Only fetch chunks if we're showing them
-            val updatedChunksMap = uiState.chunksMap.toMutableMap()
-            val targetRecording = updatedRecords.find { it.id == recording.id }
-            
-            if (targetRecording?.showChunks == true) {
-                // Fetch chunks for this recording
-                try {
-                    val chunks = repository.getChunksForSession(recording.id)
-                    updatedChunksMap[recording.id] = chunks
-                } catch (e: Exception) {
-                    Log.e("RecordListViewModel", "Failed to load chunks for session ${recording.id}", e)
-                }
-            } else {
-                // We're hiding chunks, so remove them from the map to save memory
-                updatedChunksMap.remove(recording.id)
-            }
-            
-            push(uiState.copy(
-                records = updatedRecords,
-                chunksMap = updatedChunksMap
-            ))
         }
     }
 

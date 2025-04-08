@@ -2,8 +2,10 @@ package com.mycelium.myapplication.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.Ignore
 import java.io.File
 import java.util.UUID
+import com.mycelium.myapplication.data.model.ChunkUploadQueue
 
 @Entity(tableName = "recording_sessions")
 data class RecordingSession(
@@ -14,18 +16,45 @@ data class RecordingSession(
     var audioFilePath: String? = null,
     var isUploaded: Boolean = false,
     var fileSize: Long = 0,
-    // This field is not persisted in the database - transient field for UI state
-    @androidx.room.Ignore
-    var showChunks: Boolean = false
+    // These fields are not persisted in the database - transient fields for UI state
+    @Ignore
+    var showChunks: Boolean = false,
+    @Ignore
+    var chunks: List<ChunkUploadQueue> = emptyList()
 ) {
     val duration: Long
-        get() = endTime?.let { it - startTime } ?: 0L
+        get() = if (chunks.isNotEmpty()) {
+            // Calculate total duration from all chunks
+            chunks.sumOf { chunk ->
+                val chunkFile = File(chunk.filePath)
+                if (chunkFile.exists()) {
+                    // For WAV files: (file size - 44 header bytes) / (sample rate * channels * bits per sample / 8)
+                    // Assuming 16kHz, mono, 16-bit audio (2 bytes per sample)
+                    val audioDataSize = chunkFile.length() - 44 // Subtract WAV header size
+                    val bytesPerSecond = 16000 * 1 * 2 // 16kHz * 1 channel * 2 bytes per sample
+                    (audioDataSize * 1000 / bytesPerSecond) // Convert to milliseconds
+                } else {
+                    0L
+                }
+            }
+        } else {
+            // Fall back to session timestamps
+            endTime?.let { it - startTime } ?: 0L
+        }
 
     val formattedDuration: String
         get() = formatDuration(duration)
 
     val formattedFileSize: String
-        get() = formatFileSize(fileSize)
+        get() = if (chunks.isNotEmpty()) {
+            // Sum file sizes from all chunks
+            val totalSize = chunks.sumOf { chunk ->
+                File(chunk.filePath).let { if (it.exists()) it.length() else 0L }
+            }
+            formatFileSize(totalSize)
+        } else {
+            formatFileSize(fileSize)
+        }
 
     companion object {
         private fun formatDuration(durationMs: Long): String {
