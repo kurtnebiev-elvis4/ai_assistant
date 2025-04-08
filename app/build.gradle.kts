@@ -19,8 +19,8 @@ android {
         applicationId = "com.mycelium.ai_meet_assistant"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 10002
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -40,6 +40,19 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    applicationVariants.all {
+        this.outputs
+            .map { it as com.android.build.gradle.internal.api.ApkVariantOutputImpl }
+            .forEach { output ->
+                val variant = this.buildType.name
+                var apkName = "ai_meet_assistant_"
+                apkName += this.versionName
+                if (variant.isNotEmpty()) apkName += "_$variant"
+                apkName += ".apk"
+                println("ApkName=$apkName ${this.buildType.name}")
+                output.outputFileName = apkName
+            }
     }
 }
 

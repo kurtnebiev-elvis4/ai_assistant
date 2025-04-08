@@ -10,9 +10,9 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,7 +83,8 @@ private fun RecordingItem(
     chunks: List<ChunkUploadQueue> = emptyList()
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onViewResults
     ) {
         Column(
             modifier = Modifier
@@ -98,35 +99,42 @@ private fun RecordingItem(
             ) {
                 Text(
                     text = formatDate(recording.startTime),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.clickable(onClick = onViewResults)
+                    style = MaterialTheme.typography.titleMedium
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    IconButton(onClick = onShare) {
+                Spacer(modifier = Modifier.weight(1f))
+
+                IconButton(onClick = onPlay) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause recording" else "Play recording",
+                        tint = if (isPlaying) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                    )
+                }
+                var menuExpanded by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
                         Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share all chunks"
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More options"
                         )
                     }
-                    IconButton(onClick = onPlay) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause recording" else "Play recording",
-                            tint = if (isPlaying) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Share") },
+                            onClick = {
+                                menuExpanded = false
+                                onShare()
+                            }
                         )
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete recording"
-                        )
-                    }
-                    IconButton(onClick = onToggleChunksView) {
-                        Icon(
-                            imageVector = if (recording.showChunks) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = if (recording.showChunks) "Hide chunks" else "Show chunks"
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            }
                         )
                     }
                 }
@@ -158,6 +166,15 @@ private fun RecordingItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            IconButton(
+                onClick = onToggleChunksView,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(
+                    imageVector = if (recording.showChunks) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (recording.showChunks) "Hide chunks" else "Show chunks"
+                )
+            }
 
             // Chunks list
             if (recording.showChunks) {
@@ -168,7 +185,7 @@ private fun RecordingItem(
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
-                
+
                 if (chunks.isEmpty()) {
                     Text(
                         text = "No chunks available",
@@ -208,7 +225,7 @@ private fun ChunkStatusItem(chunk: ChunkUploadQueue) {
                 text = "Chunk #${chunk.chunkIndex + 1}${if (chunk.isLastChunk) " (Last)" else ""}",
                 style = MaterialTheme.typography.bodyMedium
             )
-            
+
             ChunkStatusBadge(status = chunk.status)
         }
     }
@@ -222,7 +239,7 @@ private fun ChunkStatusBadge(status: UploadStatus) {
         UploadStatus.COMPLETED -> Pair(MaterialTheme.colorScheme.secondary, "Completed")
         UploadStatus.FAILED -> Pair(MaterialTheme.colorScheme.error, "Failed")
     }
-    
+
     Surface(
         color = color.copy(alpha = 0.2f),
         shape = MaterialTheme.shapes.small
@@ -239,4 +256,4 @@ private fun ChunkStatusBadge(status: UploadStatus) {
 private fun formatDate(timestamp: Long): String {
     val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
     return dateFormat.format(Date(timestamp))
-} 
+}

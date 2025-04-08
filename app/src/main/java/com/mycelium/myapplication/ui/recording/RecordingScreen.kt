@@ -216,6 +216,10 @@ fun RecordingScreen(
                     onRequestPermission = onRequestPermission,
                 )
             }
+            Text(
+                text = "Build Version: 1.0.2",
+                modifier = Modifier.align(Alignment.BottomStart)
+            )
         }
     }
 }
