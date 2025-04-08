@@ -1,5 +1,7 @@
 package com.mycelium.myapplication.ui.recording
 
+import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mycelium.myapplication.data.repository.RecordingRepository
@@ -22,7 +24,8 @@ data class ResultUiState(
 
 @HiltViewModel
 class ResultViewModel @Inject constructor(
-    private val repository: RecordingRepository, override val uiStateM: UIStateManager<ResultUiState>
+    private val repository: RecordingRepository, 
+    override val uiStateM: UIStateManager<ResultUiState>
 ) : ViewModel(), WithUIStateManger<ResultUiState> {
 
 
@@ -85,5 +88,27 @@ class ResultViewModel @Inject constructor(
                 )
             }
         }
+    }
+    
+    fun shareResultPart(context: Context, title: String, content: String) {
+        val shareText = "$title\n\n$content"
+        shareText(context, shareText)
+    }
+    
+    fun shareAllResults(context: Context) {
+        val allContent = uiState.resultText.entries.joinToString("\n\n\n") { entry ->
+            val parts = entry.value.split("</think>", limit = 2)
+            val displayText = if (parts.size == 2) parts[1] else entry.value
+            "${entry.key}\n\n${displayText.trim()}"
+        }
+        shareText(context, allContent)
+    }
+    
+    private fun shareText(context: Context, text: String) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        context.startActivity(Intent.createChooser(intent, "Share via"))
     }
 }

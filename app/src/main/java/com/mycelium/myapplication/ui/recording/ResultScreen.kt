@@ -7,16 +7,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import common.provideUIState
+import com.mycelium.myapplication.R
 
 @Preview
 @Composable
@@ -100,7 +104,21 @@ fun ResultScreen(
                     }
                 }
 
-                uiState.resultText.isNotEmpty() -> {}
+                uiState.resultText.isNotEmpty() -> {
+                    val context = LocalContext.current
+                    Button(
+                        onClick = { viewModel.shareAllResults(context) },
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Share,
+                            contentDescription = "Share All Results",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Share All")
+                    }
+                }
 
                 else -> {
                     Text(
