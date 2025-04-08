@@ -118,55 +118,56 @@ fun ResultScreen(
             }
             if (uiState.resultText.isNotEmpty()) {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item {
-                        Text(
-                            text = "Result",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-                    }
-                    items(uiState.resultText.toList()) {
-                        Text(
-                            text = it.first,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth()
-                        )
-
-                        val parts = it.second.split("</think>", limit = 2)
-                        val (collapsiblePart, visiblePart) = if (parts.size == 2) parts[0] to parts[1] else "" to it.second
+                    items(uiState.resultText.toList()) { item ->
                         var expanded by remember { mutableStateOf(false) }
 
-                        Card(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .animateContentSize()
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                if (collapsiblePart.isNotBlank()) {
-                                    TextButton(onClick = { expanded = !expanded }) {
-                                        Text(if (expanded) "Скрыть размышления" else "Показать размышления")
-                                    }
-                                    if (expanded) {
+                            Card(
+                                onClick = { expanded = !expanded },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = item.first,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier
+                                        .padding(16.dp)
+                                        .fillMaxWidth()
+                                )
+                            }
+
+                            if (expanded) {
+                                val parts = item.second.split("</think>", limit = 2)
+                                val (collapsiblePart, visiblePart) = if (parts.size == 2) parts[0] to parts[1] else "" to item.second
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        if (collapsiblePart.isNotBlank()) {
+                                            Text(
+                                                text = collapsiblePart.trim(),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                            )
+                                            HorizontalDivider(
+                                                modifier = Modifier
+                                                    .padding(vertical = 8.dp)
+                                                    .fillMaxWidth()
+                                            )
+                                        }
                                         Text(
-                                            text = collapsiblePart.trim(),
+                                            text = visiblePart.trim(),
                                             modifier = Modifier
-                                                .padding(top = 8.dp)
-                                                .fillMaxWidth()
-                                        )
-                                        HorizontalDivider(
-                                            modifier = Modifier
-                                                .padding(vertical = 8.dp)
                                                 .fillMaxWidth()
                                         )
                                     }
                                 }
-                                Text(
-                                    text = visiblePart.trim(),
-                                    modifier = Modifier
-                                        .padding(top = 8.dp)
-                                        .fillMaxWidth()
-                                )
                             }
                         }
                     }
