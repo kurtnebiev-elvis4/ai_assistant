@@ -1,4 +1,5 @@
 import torch
+import gc
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -37,3 +38,6 @@ def transcribe_audio(input_path: str, output_path: str):
             print(f"Transcription finished")
     except Exception as e:
         print(f"Transcription failed: {e}")
+    finally:
+        torch.cuda.empty_cache()
+        gc.collect()
