@@ -288,10 +288,10 @@ private fun ChunkStatusItem(chunk: ChunkUploadQueue) {
 @Composable
 private fun ChunkStatusBadge(status: UploadStatus) {
     val (color, text) = when (status) {
-        UploadStatus.PENDING -> Pair(MaterialTheme.colorScheme.tertiary, "Pending")
-        UploadStatus.IN_PROGRESS -> Pair(MaterialTheme.colorScheme.primary, "Uploading")
-        UploadStatus.COMPLETED -> Pair(MaterialTheme.colorScheme.secondary, "Completed")
-        UploadStatus.FAILED -> Pair(MaterialTheme.colorScheme.error, "Failed")
+        UploadStatus.PENDING -> Pair(MaterialTheme.colorScheme.tertiary, "Pending upload")
+        UploadStatus.IN_PROGRESS -> Pair(MaterialTheme.colorScheme.primary, "Upload in progress")
+        UploadStatus.COMPLETED -> Pair(MaterialTheme.colorScheme.secondary, "Upload completed")
+        UploadStatus.FAILED -> Pair(MaterialTheme.colorScheme.error, "Upload Failed")
     }
 
     Surface(

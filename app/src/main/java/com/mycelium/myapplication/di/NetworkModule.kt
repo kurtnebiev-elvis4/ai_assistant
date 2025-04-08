@@ -29,7 +29,8 @@ object NetworkModule {
             .addInterceptor(logging)
             .build()
 
-        val runpodId = "909qwv684lqjq7"
+        val runpodId = "uezrdr6qo056jf"
+//        val runpodId = "909qwv684lqjq7"
 //        val runpodId = "pn8vl8jb7ugske"
 //        val runpodId = "u9xt9rn2ib2p1i"
         val port = 8000

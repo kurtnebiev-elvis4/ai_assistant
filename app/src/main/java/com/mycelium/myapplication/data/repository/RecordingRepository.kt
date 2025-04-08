@@ -14,9 +14,11 @@ import com.mycelium.myapplication.data.recording.getFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -149,6 +151,14 @@ class RecordingRepository @Inject constructor(
         // Try to upload immediately
         processChunkUpload(queueId)
     }
+//    init {
+//        GlobalScope.launch(Dispatchers.IO) {
+//            val list = chunkUploadQueueDao.getChunksByStatus(UploadStatus.COMPLETED)
+//            list.forEach {
+//                chunkUploadQueueDao.updateChunk(it.copy(status = UploadStatus.PENDING))
+//            }
+//        }
+//    }
 
     private suspend fun processChunkUpload(chunkId: Long) {
         withContext(Dispatchers.IO) {

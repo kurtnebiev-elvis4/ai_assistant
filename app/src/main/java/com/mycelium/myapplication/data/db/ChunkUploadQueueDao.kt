@@ -10,6 +10,9 @@ interface ChunkUploadQueueDao {
     @Query("SELECT * FROM chunk_upload_queue WHERE status = :status ORDER BY createdAt ASC")
     fun getChunksWithStatus(status: UploadStatus): Flow<List<ChunkUploadQueue>>
 
+    @Query("SELECT * FROM chunk_upload_queue WHERE status = :status ORDER BY createdAt ASC")
+    suspend fun getChunksByStatus(status: UploadStatus): List<ChunkUploadQueue>
+
     @Query("SELECT * FROM chunk_upload_queue WHERE status = :status ORDER BY createdAt ASC LIMIT 1")
     suspend fun getNextChunkToUpload(status: UploadStatus = UploadStatus.PENDING): ChunkUploadQueue?
 
