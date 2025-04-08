@@ -48,6 +48,7 @@ def generate_text_chunks(prompt: str, text: str) -> str:
     inputs = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
     prompt_len = inputs.shape[1]
 
+
     transcript_tokens = tokenizer(text, return_tensors="pt").input_ids[0]
     chunks = []
     current_chunk = []
@@ -63,7 +64,7 @@ def generate_text_chunks(prompt: str, text: str) -> str:
             current_len += 1
     if current_chunk:
         chunks.append(current_chunk)
-
+    torch.cuda.empty_cache()
     full_output = ""
     for chunk in chunks:
         print(f"Prompt tokens: {prompt_len}, Chunk tokens: {len(current_chunk)}, Total: {prompt_len + len(current_chunk)}")
