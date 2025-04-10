@@ -30,8 +30,12 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+    import androidx.compose.material3.IconButton
+    import androidx.compose.material.icons.filled.MoreVert
+    import androidx.compose.material3.DropdownMenu
+    import androidx.compose.material3.DropdownMenuItem
+    import androidx.compose.runtime.mutableStateOf
+    import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,6 +44,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -200,6 +205,55 @@ fun RecordingScreen(
 ) {
 
     Scaffold(
+        topBar = {
+            var expanded by remember { mutableStateOf(false) }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.align(Alignment.CenterStart),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Recording",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+
+                Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                    IconButton(onClick = { expanded = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Menu"
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Server") },
+                            onClick = {
+                                expanded = false
+                                hideServerDialog()
+                                showAddServerDialog()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Chat") },
+                            onClick = {
+                                expanded = false
+                                onNavigateToChat()
+                            }
+                        )
+                    }
+                }
+            }
+        },
         floatingActionButton = {
             Column {
                 ServerButton(
