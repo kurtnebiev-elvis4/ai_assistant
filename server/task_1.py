@@ -6,6 +6,8 @@ import threading
 from datetime import date
 from keys import UPLOAD_DIR
 
+MAX_RESPONSE_TOKENS = 1024
+
 CURRENT_DATE = date.today().isoformat()
 model_lock = threading.Lock()
 
@@ -15,8 +17,8 @@ PROMPT_SUMMARIZE = (
     "Audience: Internal team.\n"
     "Format: Paragraph style with clear, natural language.\n"
     "Role: You are a highly skilled professional in summarizing and interpreting team discussions with precision and clarity.\n"
-    "Instruction (in English): Create a focused summary of the following meeting. Use the same language as the transcript. "
-    "Ensure clarity, avoid repetitive phrasing, and use natural sentence structure.\n"
+    "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, summarize the key points in a concise paragraph. "
+    "Do not add any information that is not explicitly mentioned. If the content is not a meeting or lacks meaningful discussion (e.g., random text, unrelated talk), return the message: 'no meaningful content found'.\n"
     "Meeting transcript starts below:\n"
 )
 PROMPT_DECISIONS = (
@@ -26,8 +28,9 @@ PROMPT_DECISIONS = (
     "Format: Paragraph style with clear, natural language.\n"
     "Role: You are a highly skilled professional in summarizing and interpreting team discussions with precision and clarity. "
     "You are an expert in organizational communication, team alignment, and extracting key insights from collaborative conversations.\n"
-    "Instruction (in English): Identify and list all decisions made in the following meeting, if any. "
-    "Use the same language as the transcript. Avoid repeating phrases and ensure clarity.\n"
+    "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, identify and list all decisions made, if any. "
+    "Use the same language as the transcript. Avoid repeating phrases and ensure clarity. "
+    "If the content is not a meeting or lacks meaningful discussion, return the message: 'no meaningful content found'.\n"
     "Meeting transcript starts below:\n"
 )
 PROMPT_TASKS = (
@@ -37,8 +40,9 @@ PROMPT_TASKS = (
     "Format: Paragraph style with clear, natural language.\n"
     "Role: You are a highly skilled professional in summarizing and interpreting team discussions with precision and clarity. "
     "You are an expert in organizational communication, team alignment, and extracting key insights from collaborative conversations.\n"
-    "Instruction (in English): Identify and list all action items and tasks discussed in the following meeting, if any. "
-    "Use the same language as the transcript. Avoid redundancy and use clear, natural language.\n"
+    "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, identify and list all action items and tasks discussed, if any. "
+    "Use the same language as the transcript. Avoid redundancy and use clear, natural language. "
+    "If the content is not a meeting or lacks meaningful discussion, return the message: 'no meaningful content found'.\n"
     "Meeting transcript starts below:\n"
 )
 
@@ -55,7 +59,7 @@ def generate_text_chunks(prompt: str, text: str) -> str:
     current_len = prompt_len
 
     for token in transcript_tokens:
-        if current_len + 1 > max_len - 512:
+        if current_len + 1 > max_len - MAX_RESPONSE_TOKENS:
             chunks.append(current_chunk)
             current_chunk = [token]
             current_len = prompt_len + 1
@@ -71,7 +75,7 @@ def generate_text_chunks(prompt: str, text: str) -> str:
         chunk_tensor = torch.tensor([chunk], dtype=torch.long, device=model.device)
         input_ids = torch.cat([inputs, chunk_tensor], dim=1)
         with model_lock:
-            max_output_tokens = min(512, max_len - input_ids.shape[1])
+            max_output_tokens = min(MAX_RESPONSE_TOKENS, max_len - input_ids.shape[1])
             outputs = model.generate(input_ids, max_new_tokens=max_output_tokens,
                                      do_sample=True,
                                      temperature=0.6,
