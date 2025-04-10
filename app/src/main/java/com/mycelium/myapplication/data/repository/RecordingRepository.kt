@@ -37,7 +37,8 @@ class RecordingRepository @Inject constructor(
     private val recordingDao: RecordingDao,
     private val chunkUploadQueueDao: ChunkUploadQueueDao,
     private val recordingResultDao: RecordingResultDao,
-    private val assistantApi: AssistantApi
+    private val assistantApi: AssistantApi,
+    private val serverManager: ServerManager
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 

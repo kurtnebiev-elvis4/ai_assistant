@@ -9,14 +9,18 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
@@ -80,6 +84,7 @@ fun RecordingScreenPreview() {
         recordingState = RecordingState(time = "10:00"),
         recordListState = RecordListState(),
         waveform = emptyList(),
+        serverUiState = ServerUiState(),
         onRequestPermission = {},
         callback = object : RecordingScreenCallback {
             override fun stopRecording() {}
@@ -92,18 +97,23 @@ fun RecordingScreenPreview() {
             override fun shareRecordingChunks(recording: RecordingSession) {}
             override fun playRecording(recording: RecordingSession) {}
             override fun toggleChunksView(recording: RecordingSession) {}
-        }, {})
+        },
+        hideServerDialog = {},
+        showAddServerDialog = {},
+        onNavigateToResult = {})
 }
 
 @Composable
 fun RecordingScreen(
     viewModel: RecordingViewModel = hiltViewModel(),
     listViewModel: RecordListViewModel = hiltViewModel(),
+    serverViewModel: ServerViewModel = hiltViewModel(),
     onRequestPermission: () -> Unit,
     onNavigateToResult: (String) -> Unit
 ) {
     val recordingState by viewModel.provideUIState().collectAsState()
     val recordListState by listViewModel.provideUIState().collectAsState()
+    val serverUiState by serverViewModel.provideUIState().collectAsState()
     val waveform by viewModel.waveform.collectAsState()
 
     val context = LocalContext.current
@@ -119,7 +129,6 @@ fun RecordingScreen(
         }
     }
 
-
     // Show errors as a toast if needed
     LaunchedEffect(recordingState.error) {
         if (recordingState.error.isNotEmpty()) {
@@ -131,13 +140,41 @@ fun RecordingScreen(
         }
     }
 
+    // Show server selection dialog
+    if (serverUiState.isShowingDialog) {
+        if (serverUiState.newServerName.isNotEmpty() || serverUiState.newServerRunpodId.isNotEmpty()) {
+            // Show server form dialog
+            ServerFormDialog(
+                state = serverUiState,
+                onDismiss = { serverViewModel.hideDialog() },
+                onSave = { serverViewModel.saveServer() },
+                onNameChange = { serverViewModel.updateNewServerName(it) },
+                onRunpodIdChange = { serverViewModel.updateNewServerRunpodId(it) },
+                onPortChange = { serverViewModel.updateNewServerPort(it) }
+            )
+        } else {
+            // Show server list dialog
+            ServerListDialog(
+                state = serverUiState,
+                onDismiss = { serverViewModel.hideDialog() },
+                onSelectServer = { serverViewModel.selectServer(it) },
+                onAddServer = { serverViewModel.showAddServerDialog() },
+                onEditServer = { serverViewModel.showEditServerDialog(it) },
+                onDeleteServer = { serverViewModel.deleteServer(it) }
+            )
+        }
+    }
+
     RecordingScreen(
         recordingState,
         recordListState,
+        serverUiState,
         waveform,
         onRequestPermission,
         viewModel,
         listViewModel,
+        { serverViewModel.hideDialog() },
+        { serverViewModel.showAddServerDialog() },
         onNavigateToResult
     )
 }
@@ -146,16 +183,22 @@ fun RecordingScreen(
 fun RecordingScreen(
     recordingState: RecordingState,
     recordListState: RecordListState,
+    serverUiState: ServerUiState,
     waveform: List<Short>,
     onRequestPermission: () -> Unit,
     callback: RecordingScreenCallback,
     listCallback: RecordListCallback,
+    hideServerDialog: () -> Unit,
+    showAddServerDialog: () -> Unit,
     onNavigateToResult: (String) -> Unit
 ) {
 
     Scaffold(
         floatingActionButton = {
-
+            ServerButton(
+                modifier = Modifier.padding(bottom = 80.dp),
+                onClick = { hideServerDialog() }
+            )
         }
     ) { padding ->
         Box(
@@ -216,10 +259,39 @@ fun RecordingScreen(
                     onRequestPermission = onRequestPermission,
                 )
             }
-            Text(
-                text = "Build Version: 1.0.2",
-                modifier = Modifier.align(Alignment.BottomStart)
-            )
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(8.dp),
+            ) {
+                Text(
+                    text = "Build Version: 1.0.2",
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable {
+                        hideServerDialog()
+                        showAddServerDialog()
+                    }
+                ) {
+                    serverUiState.selectedServer?.let { selectedServer ->
+                        ServerIcon(
+                            serverEntry = selectedServer,
+                            isSelected = true,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = selectedServer.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
         }
     }
 }
