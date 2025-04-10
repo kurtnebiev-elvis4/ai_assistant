@@ -19,8 +19,8 @@ android {
         applicationId = "com.mycelium.ai_meet_assistant"
         minSdk = 24
         targetSdk = 35
-        versionCode = 10003
-        versionName = "1.0.3"
+        versionCode = 10004
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -40,6 +40,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     applicationVariants.all {
         this.outputs

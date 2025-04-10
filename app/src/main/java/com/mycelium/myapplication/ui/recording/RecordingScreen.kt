@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mycelium.ai_meet_assistant.BuildConfig
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.recording.RecordState
 import common.provideUIState
@@ -335,7 +336,7 @@ fun RecordingScreen(
                     .padding(8.dp),
             ) {
                 Text(
-                    text = "Build Version: 1.0.2",
+                    text = "Build Version: ${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodySmall
                 )
 

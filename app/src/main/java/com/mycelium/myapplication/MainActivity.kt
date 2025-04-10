@@ -13,6 +13,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.gson.internal.GsonBuildConfig
+import com.mycelium.ai_meet_assistant.BuildConfig
 import com.mycelium.myapplication.data.repository.UploadChunkWorker
 import com.mycelium.myapplication.ui.chat.ChatScreen
 import com.mycelium.myapplication.ui.recording.RecordingScreen
@@ -67,9 +69,6 @@ class MainActivity : ComponentActivity() {
                         ChatScreen(
                             onNavigateUp = { navController.popBackStack() },
                             showServerDialog = {
-
-
-
                             }
                         )
                     }
