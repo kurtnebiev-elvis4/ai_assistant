@@ -78,7 +78,7 @@ def generate_text_chunks(prompt: str, text: str) -> str:
             max_output_tokens = min(MAX_RESPONSE_TOKENS, max_len - input_ids.shape[1])
             outputs = model.generate(input_ids, max_new_tokens=max_output_tokens,
                                      do_sample=True,
-                                     temperature=0.6,
+                                     temperature=0.5,
                                      top_p=0.95)
             torch.cuda.empty_cache()
         output_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
