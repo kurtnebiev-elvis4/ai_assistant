@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -292,6 +293,22 @@ fun RecordingScreen(
                             text = selectedServer.name,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
+                        )
+                        
+                        Spacer(modifier = Modifier.width(4.dp))
+                        
+                        // Server status indicator
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(
+                                    color = if (selectedServer.isOnline) {
+                                        Color.Green
+                                    } else {
+                                        MaterialTheme.colorScheme.error
+                                    },
+                                    shape = CircleShape
+                                )
                         )
                     }
                 }

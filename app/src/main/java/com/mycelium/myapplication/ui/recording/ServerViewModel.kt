@@ -9,6 +9,7 @@ import common.WithUIStateManger
 import common.push
 import common.uiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,7 +61,7 @@ class ServerViewModel @Inject constructor(
         // Periodic health checks
         viewModelScope.launch {
             while(true) {
-                kotlinx.coroutines.delay(60000) // Check every minute
+                delay(60000) // Check every minute
                 checkAllServersHealth()
             }
         }
