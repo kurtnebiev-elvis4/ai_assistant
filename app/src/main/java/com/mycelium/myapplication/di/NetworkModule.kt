@@ -6,6 +6,8 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.mycelium.myapplication.data.model.ServerEntry
 import com.mycelium.myapplication.data.repository.AssistantApi
+import com.mycelium.myapplication.data.repository.ChatRepository
+import com.mycelium.myapplication.data.repository.ChatRepositoryImpl
 import com.mycelium.myapplication.data.repository.ServerManager
 import dagger.Module
 import dagger.Provides
@@ -123,5 +125,11 @@ object NetworkModule {
             .build()
 
         return retrofit.create(AssistantApi::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideChatRepository(client: OkHttpClient): ChatRepository {
+        return ChatRepositoryImpl(client)
     }
 }

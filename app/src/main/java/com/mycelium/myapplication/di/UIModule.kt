@@ -1,5 +1,6 @@
 package com.mycelium.myapplication.di
 
+import com.mycelium.myapplication.ui.chat.ChatUiState
 import com.mycelium.myapplication.ui.recording.RecordListState
 import com.mycelium.myapplication.ui.recording.RecordingState
 import com.mycelium.myapplication.ui.recording.ResultUiState
@@ -23,4 +24,7 @@ object UIModule {
 
     @Provides
     fun provideServerState(): ServerUiState = ServerUiState()
+    
+    @Provides
+    fun provideChatState(): ChatUiState = ChatUiState()
 }

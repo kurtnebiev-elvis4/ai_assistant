@@ -14,8 +14,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.mycelium.myapplication.data.repository.UploadChunkWorker
+import com.mycelium.myapplication.ui.chat.ChatScreen
 import com.mycelium.myapplication.ui.recording.RecordingScreen
 import com.mycelium.myapplication.ui.recording.ResultScreen
+import com.mycelium.myapplication.ui.recording.ServerViewModel
 import com.mycelium.myapplication.ui.theme.MyApplicationTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -39,6 +41,9 @@ class MainActivity : ComponentActivity() {
                             onRequestPermission = { requestAudioPermission() },
                             onNavigateToResult = { recordingId ->
                                 navController.navigate("result/$recordingId")
+                            },
+                            onNavigateToChat = {
+                                navController.navigate("chat")
                             }
                         )
 
@@ -55,6 +60,17 @@ class MainActivity : ComponentActivity() {
                         ResultScreen(
                             recordingId = recordingId,
                             onBackClick = { navController.popBackStack() }
+                        )
+                    }
+                    
+                    composable("chat") {
+                        ChatScreen(
+                            onNavigateUp = { navController.popBackStack() },
+                            showServerDialog = {
+
+
+
+                            }
                         )
                     }
                 }

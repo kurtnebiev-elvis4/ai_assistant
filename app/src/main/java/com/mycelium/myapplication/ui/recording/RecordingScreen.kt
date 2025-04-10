@@ -101,7 +101,8 @@ fun RecordingScreenPreview() {
         },
         hideServerDialog = {},
         showAddServerDialog = {},
-        onNavigateToResult = {})
+        onNavigateToResult = {},
+        onNavigateToChat = {})
 }
 
 @Composable
@@ -110,7 +111,8 @@ fun RecordingScreen(
     listViewModel: RecordListViewModel = hiltViewModel(),
     serverViewModel: ServerViewModel = hiltViewModel(),
     onRequestPermission: () -> Unit,
-    onNavigateToResult: (String) -> Unit
+    onNavigateToResult: (String) -> Unit,
+    onNavigateToChat: () -> Unit = {}
 ) {
     val recordingState by viewModel.provideUIState().collectAsState()
     val recordListState by listViewModel.provideUIState().collectAsState()
@@ -177,7 +179,8 @@ fun RecordingScreen(
         listViewModel,
         { serverViewModel.hideDialog() },
         { serverViewModel.showAddServerDialog() },
-        onNavigateToResult
+        onNavigateToResult,
+        onNavigateToChat
     )
 }
 
@@ -192,18 +195,25 @@ fun RecordingScreen(
     listCallback: RecordListCallback,
     hideServerDialog: () -> Unit,
     showAddServerDialog: () -> Unit,
-    onNavigateToResult: (String) -> Unit
+    onNavigateToResult: (String) -> Unit,
+    onNavigateToChat: () -> Unit
 ) {
 
     Scaffold(
         floatingActionButton = {
-            ServerButton(
-                modifier = Modifier.padding(bottom = 80.dp),
-                onClick = {
-                    hideServerDialog()
-                    showAddServerDialog()
-                }
-            )
+            Column {
+                ServerButton(
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    onClick = {
+                        hideServerDialog()
+                        showAddServerDialog()
+                    }
+                )
+                ChatButton(
+                    modifier = Modifier.padding(bottom = 80.dp),
+                    onClick = onNavigateToChat
+                )
+            }
         }
     ) { padding ->
         Box(
