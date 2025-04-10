@@ -25,7 +25,8 @@ data class ServerUiState(
     val newServerPort: String = "8000",
     val isEditMode: Boolean = false,
     val editServerId: String = "",
-    val errorMessage: String = ""
+    val errorMessage: String = "",
+    val isCheckingHealth: Boolean = false
 )
 
 @HiltViewModel
@@ -44,6 +45,23 @@ class ServerViewModel @Inject constructor(
         viewModelScope.launch {
             serverManager.selectedServer.collectLatest { server ->
                 push(uiState.copy(selectedServer = server))
+            }
+        }
+        
+        viewModelScope.launch {
+            serverManager.isCheckingHealth.collectLatest { isChecking ->
+                push(uiState.copy(isCheckingHealth = isChecking))
+            }
+        }
+        
+        // Initial health check
+        checkAllServersHealth()
+        
+        // Periodic health checks
+        viewModelScope.launch {
+            while(true) {
+                kotlinx.coroutines.delay(60000) // Check every minute
+                checkAllServersHealth()
             }
         }
     }
@@ -145,6 +163,20 @@ class ServerViewModel @Inject constructor(
     fun deleteServer(server: ServerEntry) {
         if (server.isCustom) {
             serverManager.deleteServer(server.id)
+        }
+    }
+    
+    fun checkServerHealth(serverId: String) {
+        serverManager.checkServerHealth(serverId)
+    }
+    
+    fun checkAllServersHealth() {
+        serverManager.checkAllServersHealth()
+    }
+    
+    fun refreshHealthStatus() {
+        viewModelScope.launch {
+            checkAllServersHealth()
         }
     }
 }

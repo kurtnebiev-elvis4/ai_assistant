@@ -160,7 +160,8 @@ fun RecordingScreen(
                 onSelectServer = { serverViewModel.selectServer(it) },
                 onAddServer = { serverViewModel.showAddServerDialog() },
                 onEditServer = { serverViewModel.showEditServerDialog(it) },
-                onDeleteServer = { serverViewModel.deleteServer(it) }
+                onDeleteServer = { serverViewModel.deleteServer(it) },
+                onRefreshHealth = { serverViewModel.refreshHealthStatus() }
             )
         }
     }
@@ -197,7 +198,10 @@ fun RecordingScreen(
         floatingActionButton = {
             ServerButton(
                 modifier = Modifier.padding(bottom = 80.dp),
-                onClick = { hideServerDialog() }
+                onClick = {
+                    hideServerDialog()
+                    showAddServerDialog()
+                }
             )
         }
     ) { padding ->
