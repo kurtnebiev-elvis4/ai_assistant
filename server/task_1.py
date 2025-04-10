@@ -11,39 +11,34 @@ MAX_RESPONSE_TOKENS = 1024
 CURRENT_DATE = date.today().isoformat()
 model_lock = threading.Lock()
 
-PROMPT_SUMMARIZE = (
+BASE_PROMPT_HEADER = (
     f"Current date: {CURRENT_DATE}\n"
     f"Language of the transcript: {{lang}}\n"
     "Audience: Internal team.\n"
     "Format: Paragraph style with clear, natural language.\n"
     "Role: You are a highly skilled professional in summarizing and interpreting team discussions with precision and clarity.\n"
-    "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, summarize the key points in a concise paragraph. "
-    "Do not add any information that is not explicitly mentioned. If the content is not a meeting or lacks meaningful discussion (e.g., random text, unrelated talk), return the message: 'no meaningful content found'.\n"
-    "Meeting transcript starts below:\n"
+    "You are an expert in organizational communication, team alignment, and extracting key insights from collaborative conversations.\n"
+)
+
+PROMPT_SUMMARIZE = (
+        BASE_PROMPT_HEADER +
+        "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, summarize the key points in a concise paragraph. "
+        "Do not add any information that is not explicitly mentioned. If the content is not a meeting or lacks meaningful discussion (e.g., random text, unrelated talk), return the message: 'no meaningful content found'.\n"
+        "Meeting transcript starts below:\n"
 )
 PROMPT_DECISIONS = (
-    f"Current date: {CURRENT_DATE}\n"
-    f"Language of the transcript: {{lang}}\n"
-    "Audience: Internal team.\n"
-    "Format: Paragraph style with clear, natural language.\n"
-    "Role: You are a highly skilled professional in summarizing and interpreting team discussions with precision and clarity. "
-    "You are an expert in organizational communication, team alignment, and extracting key insights from collaborative conversations.\n"
-    "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, identify and list all decisions made, if any. "
-    "Use the same language as the transcript. Avoid repeating phrases and ensure clarity. "
-    "If the content is not a meeting or lacks meaningful discussion, return the message: 'no meaningful content found'.\n"
-    "Meeting transcript starts below:\n"
+        BASE_PROMPT_HEADER +
+        "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, identify and list all decisions made, if any. "
+        "Use the same language as the transcript. Avoid repeating phrases and ensure clarity. "
+        "If the content is not a meeting or lacks meaningful discussion, return the message: 'no meaningful content found'.\n"
+        "Meeting transcript starts below:\n"
 )
 PROMPT_TASKS = (
-    f"Current date: {CURRENT_DATE}\n"
-    f"Language of the transcript: {{lang}}\n"
-    "Audience: Internal team.\n"
-    "Format: Paragraph style with clear, natural language.\n"
-    "Role: You are a highly skilled professional in summarizing and interpreting team discussions with precision and clarity. "
-    "You are an expert in organizational communication, team alignment, and extracting key insights from collaborative conversations.\n"
-    "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, identify and list all action items and tasks discussed, if any. "
-    "Use the same language as the transcript. Avoid redundancy and use clear, natural language. "
-    "If the content is not a meeting or lacks meaningful discussion, return the message: 'no meaningful content found'.\n"
-    "Meeting transcript starts below:\n"
+        BASE_PROMPT_HEADER +
+        "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, identify and list all action items and tasks discussed, if any. "
+        "Use the same language as the transcript. Avoid redundancy and use clear, natural language. "
+        "If the content is not a meeting or lacks meaningful discussion, return the message: 'no meaningful content found'.\n"
+        "Meeting transcript starts below:\n"
 )
 
 
@@ -51,7 +46,6 @@ def generate_text_chunks(prompt: str, text: str) -> str:
     max_len = tokenizer.model_max_length
     inputs = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
     prompt_len = inputs.shape[1]
-
 
     transcript_tokens = tokenizer(text, return_tensors="pt").input_ids[0]
     chunks = []
@@ -71,7 +65,8 @@ def generate_text_chunks(prompt: str, text: str) -> str:
     torch.cuda.empty_cache()
     full_output = ""
     for chunk in chunks:
-        print(f"Prompt tokens: {prompt_len}, Chunk tokens: {len(current_chunk)}, Total: {prompt_len + len(current_chunk)}")
+        print(
+            f"Prompt tokens: {prompt_len}, Chunk tokens: {len(current_chunk)}, Total: {prompt_len + len(current_chunk)}")
         chunk_tensor = torch.tensor([chunk], dtype=torch.long, device=model.device)
         input_ids = torch.cat([inputs, chunk_tensor], dim=1)
         with model_lock:
