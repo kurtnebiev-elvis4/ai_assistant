@@ -14,11 +14,9 @@ import com.mycelium.myapplication.data.recording.getFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -91,7 +89,7 @@ class RecordingRepository @Inject constructor(
                     emit(type to result.content)
                 }
             }
-            if(local == true) {
+            if (local == true) {
                 return@flow
             }
 
@@ -229,6 +227,27 @@ class RecordingRepository @Inject constructor(
                     chunkUploadQueueDao.updateChunkStatus(chunk.id, UploadStatus.PENDING)
                     processChunkUpload(chunk.id)
                 }
+            }
+        }
+    }
+
+    // Retry uploading a specific chunk
+    suspend fun retryChunkUpload(chunkId: Long) {
+        withContext(Dispatchers.IO) {
+            // Mark as pending and retry
+            chunkUploadQueueDao.updateChunkStatus(chunkId, UploadStatus.PENDING)
+            processChunkUpload(chunkId)
+        }
+    }
+
+    // Retry all failed uploads for a specific session
+    suspend fun retryUpload(chunks: List<Long>) {
+        withContext(Dispatchers.IO) {
+            chunks.forEach { chunkId ->
+                chunkUploadQueueDao.updateChunkStatus(chunkId, UploadStatus.PENDING)
+            }
+            chunks.forEach { chunkId ->
+                processChunkUpload(chunkId)
             }
         }
     }

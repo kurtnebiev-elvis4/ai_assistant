@@ -36,7 +36,8 @@ fun RecordingList(
     onViewResults: (RecordingSession) -> Unit,
     onToggleChunksView: (RecordingSession) -> Unit,
     currentPlayingSession: String? = null,
-    chunksMap: Map<String, List<ChunkUploadQueue>> = emptyMap()
+    chunksMap: Map<String, List<ChunkUploadQueue>> = emptyMap(),
+    onRetryChunkUpload: (List<ChunkUploadQueue>) -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -52,7 +53,8 @@ fun RecordingList(
                 onViewResults = { onViewResults(recording) },
                 onToggleChunksView = { onToggleChunksView(recording) },
                 isPlaying = currentPlayingSession == recording.id,
-                chunks = chunksMap[recording.id] ?: emptyList()
+                chunks = chunksMap[recording.id] ?: emptyList(),
+                onRetryChunk = onRetryChunkUpload
             )
         }
     }
@@ -82,7 +84,8 @@ private fun RecordingItem(
     onViewResults: () -> Unit,
     onToggleChunksView: () -> Unit,
     isPlaying: Boolean = false,
-    chunks: List<ChunkUploadQueue> = emptyList()
+    chunks: List<ChunkUploadQueue> = emptyList(),
+    onRetryChunk: (List<ChunkUploadQueue>) -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -173,11 +176,11 @@ private fun RecordingItem(
                 val pendingChunks = recording.chunks.count { it.status == UploadStatus.PENDING }
                 val inProgressChunks = recording.chunks.count { it.status == UploadStatus.IN_PROGRESS }
                 val failedChunks = recording.chunks.count { it.status == UploadStatus.FAILED }
-                
+
                 Text(
                     text = if (totalChunks > 0) {
                         "Chunks: $completedChunks/$totalChunks uploaded" +
-                        if (failedChunks > 0) " • $failedChunks failed" else ""
+                                if (failedChunks > 0) " • $failedChunks failed" else ""
                     } else {
                         "No chunks"
                     },
@@ -186,7 +189,19 @@ private fun RecordingItem(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                
+
+                // Add a retry all button if there are failed chunks
+                Button(
+                    onClick = { onRetryChunk(recording.chunks) },
+                    modifier = Modifier.padding(end = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                ) {
+                    Text("Retry All")
+                }
+
                 // Show indicator dots for chunk status
                 if (totalChunks > 0) {
                     Row(
@@ -251,7 +266,7 @@ private fun RecordingItem(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         chunks.forEach { chunk ->
-                            ChunkStatusItem(chunk = chunk)
+                            ChunkStatusItem(chunk = chunk, onRetryChunk = { onRetryChunk(listOf(chunk)) })
                         }
                     }
                 }
@@ -261,7 +276,7 @@ private fun RecordingItem(
 }
 
 @Composable
-private fun ChunkStatusItem(chunk: ChunkUploadQueue) {
+private fun ChunkStatusItem(chunk: ChunkUploadQueue, onRetryChunk: (ChunkUploadQueue) -> Unit = {}) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -280,7 +295,24 @@ private fun ChunkStatusItem(chunk: ChunkUploadQueue) {
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            ChunkStatusBadge(status = chunk.status)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Show retry button for failed chunks
+                if (chunk.status == UploadStatus.FAILED) {
+                    Button(
+                        onClick = { onRetryChunk(chunk) },
+                        modifier = Modifier.padding(end = 8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    ) {
+                        Text("Retry")
+                    }
+                }
+
+                // Status badge
+                ChunkStatusBadge(status = chunk.status)
+            }
         }
     }
 }

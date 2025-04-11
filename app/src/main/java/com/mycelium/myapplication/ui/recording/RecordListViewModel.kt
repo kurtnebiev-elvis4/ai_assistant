@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mycelium.myapplication.data.model.ChunkUploadQueue
 import com.mycelium.myapplication.data.model.RecordingSession
+import com.mycelium.myapplication.data.model.UploadStatus
 import com.mycelium.myapplication.data.repository.RecordingRepository
 import common.UIStateManager
 import common.WithUIStateManger
@@ -14,8 +15,6 @@ import common.uiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -40,11 +39,15 @@ class RecordListViewModel @Inject constructor(
 
 
     init {
+        update()
+    }
+
+    fun update() {
         viewModelScope.launch(Dispatchers.Default) {
             repository.getAllRecordings().collect { recordings ->
                 val updatedChunksMap = mutableMapOf<String, List<ChunkUploadQueue>>()
                 val updatedRecordings = recordings.toMutableList()
-                
+
                 // Load chunks for all recordings
                 updatedRecordings.forEach { recording ->
                     try {
@@ -53,18 +56,20 @@ class RecordListViewModel @Inject constructor(
                         if (recording.showChunks) {
                             updatedChunksMap[recording.id] = chunks
                         }
-                        
+
                         // Also set the chunks in the recording object for calculations
                         recording.chunks = chunks
                     } catch (e: Exception) {
                         Log.e("RecordListViewModel", "Failed to load chunks for session ${recording.id}", e)
                     }
                 }
-                
-                push(uiState.copy(
-                    records = updatedRecordings,
-                    chunksMap = updatedChunksMap
-                ))
+
+                push(
+                    uiState.copy(
+                        records = updatedRecordings,
+                        chunksMap = updatedChunksMap
+                    )
+                )
             }
         }
     }
@@ -78,23 +83,23 @@ class RecordListViewModel @Inject constructor(
         viewModelScope.launch {
             // Create a mutable copy of the recordings list 
             val updatedRecords = uiState.records.toMutableList()
-            
+
             // Find and update the target recording
             val targetIndex = updatedRecords.indexOfFirst { it.id == recording.id }
             if (targetIndex >= 0) {
                 val targetRecording = updatedRecords[targetIndex]
                 // Toggle the showChunks flag for the selected recording
                 targetRecording.showChunks = !targetRecording.showChunks
-                
+
                 // Make a copy of the chunksMap
                 val updatedChunksMap = uiState.chunksMap.toMutableMap()
-                
+
                 if (targetRecording.showChunks) {
                     // If we're showing chunks, ensure they're loaded
                     try {
                         val chunks = repository.getChunksForSession(recording.id)
                         updatedChunksMap[recording.id] = chunks
-                        
+
                         // Also update the chunks in the recording object for calculations
                         targetRecording.chunks = chunks
                     } catch (e: Exception) {
@@ -105,11 +110,13 @@ class RecordListViewModel @Inject constructor(
                     updatedChunksMap.remove(recording.id)
                     // But keep the chunks in the recording object for calculations
                 }
-                
-                push(uiState.copy(
-                    records = updatedRecords,
-                    chunksMap = updatedChunksMap
-                ))
+
+                push(
+                    uiState.copy(
+                        records = updatedRecords,
+                        chunksMap = updatedChunksMap
+                    )
+                )
             }
         }
     }
@@ -263,6 +270,40 @@ class RecordListViewModel @Inject constructor(
                 push(uiState.copy(shareIntent = intent))
             } catch (e: Exception) {
                 push(uiState.copy(error = e.message ?: "Failed to share recording chunks"))
+            }
+        }
+    }
+
+    override fun retryChunkUpload(chunks: List<ChunkUploadQueue>) {
+        viewModelScope.launch {
+            try {
+                // Check if this is a request to retry all failed chunks for a session
+                if (chunks.size > 1) {
+                    // Retry all failed chunks for this session
+                    repository.retryUpload(chunks.map { it.id })
+
+                    update()
+                } else {
+                    val chunk = chunks.first()
+                    // Retry a single specific chunk
+                    repository.retryChunkUpload(chunk.id)
+
+                    // Update UI to show the chunk status as pending
+                    val updatedChunksMap = uiState.chunksMap.toMutableMap()
+                    val chunksList = updatedChunksMap[chunk.sessionId]?.toMutableList()
+
+                    chunksList?.let { chunks ->
+                        val chunkIndex = chunks.indexOfFirst { it.id == chunk.id }
+                        if (chunkIndex >= 0) {
+                            val updatedChunk = chunks[chunkIndex].copy(status = UploadStatus.PENDING)
+                            chunks[chunkIndex] = updatedChunk
+                            updatedChunksMap[chunk.sessionId] = chunks
+                            push(uiState.copy(chunksMap = updatedChunksMap))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                push(uiState.copy(error = e.message ?: "Failed to retry chunk upload"))
             }
         }
     }

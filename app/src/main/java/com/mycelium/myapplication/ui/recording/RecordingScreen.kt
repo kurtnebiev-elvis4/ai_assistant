@@ -30,12 +30,12 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-    import androidx.compose.material3.IconButton
-    import androidx.compose.material.icons.filled.MoreVert
-    import androidx.compose.material3.DropdownMenu
-    import androidx.compose.material3.DropdownMenuItem
-    import androidx.compose.runtime.mutableStateOf
-    import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,6 +58,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mycelium.ai_meet_assistant.BuildConfig
+import com.mycelium.myapplication.data.model.ChunkUploadQueue
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.recording.RecordState
 import common.provideUIState
@@ -74,6 +75,7 @@ interface RecordListCallback {
     fun shareRecordingChunks(recording: RecordingSession)
     fun playRecording(recording: RecordingSession)
     fun toggleChunksView(recording: RecordingSession)
+    fun retryChunkUpload(chunk: List<ChunkUploadQueue>)
 }
 
 fun movingAverage(data: List<Short>, windowSize: Int = 5): List<Short> {
@@ -104,11 +106,13 @@ fun RecordingScreenPreview() {
             override fun shareRecordingChunks(recording: RecordingSession) {}
             override fun playRecording(recording: RecordingSession) {}
             override fun toggleChunksView(recording: RecordingSession) {}
+            override fun retryChunkUpload(chunk: List<ChunkUploadQueue>) {}
         },
         hideServerDialog = {},
         showAddServerDialog = {},
         onNavigateToResult = {},
-        onNavigateToChat = {})
+        onNavigateToChat = {},
+        onRetryChunkUpload = {})
 }
 
 @Composable
@@ -186,7 +190,8 @@ fun RecordingScreen(
         { serverViewModel.hideDialog() },
         { serverViewModel.showAddServerDialog() },
         onNavigateToResult,
-        onNavigateToChat
+        onNavigateToChat,
+        listViewModel::retryChunkUpload
     )
 }
 
@@ -202,7 +207,8 @@ fun RecordingScreen(
     hideServerDialog: () -> Unit,
     showAddServerDialog: () -> Unit,
     onNavigateToResult: (String) -> Unit,
-    onNavigateToChat: () -> Unit
+    onNavigateToChat: () -> Unit,
+    onRetryChunkUpload: (List<ChunkUploadQueue>) -> Unit = {}
 ) {
 
     Scaffold(
@@ -287,6 +293,7 @@ fun RecordingScreen(
                     onNavigateToResult(recording.id)
                 },
                 onToggleChunksView = listCallback::toggleChunksView,
+                onRetryChunkUpload = onRetryChunkUpload,
                 currentPlayingSession = recordListState.currentPlayingSession,
                 chunksMap = recordListState.chunksMap
             )
@@ -359,9 +366,9 @@ fun RecordingScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        
+
                         Spacer(modifier = Modifier.width(4.dp))
-                        
+
                         // Server status indicator
                         Box(
                             modifier = Modifier
