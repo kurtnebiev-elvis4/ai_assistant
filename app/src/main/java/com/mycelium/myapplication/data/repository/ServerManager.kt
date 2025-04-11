@@ -37,6 +37,10 @@ class ServerManager @Inject constructor(
 
     private val _selectedServer = MutableStateFlow<ServerEntry?>(null)
     val selectedServer: StateFlow<ServerEntry?> = _selectedServer.asStateFlow()
+    
+    // Keep a cached reference of the previously selected server
+    // This is useful for when we need to recreate the API client
+    private var cachedSelectedServer: ServerEntry? = null
 
     private val _isCheckingHealth = MutableStateFlow(false)
     val isCheckingHealth: StateFlow<Boolean> = _isCheckingHealth.asStateFlow()
@@ -55,15 +59,41 @@ class ServerManager @Inject constructor(
 
     private fun loadSelectedServer() {
         val selectedServerId = preferences.getString(PREF_SELECTED_SERVER_ID, null)
-        _selectedServer.value = _serverList.value.find { it.id == selectedServerId } ?: _serverList.value.firstOrNull()
+        
+        // Find the selected server by ID
+        var server = _serverList.value.find { it.id == selectedServerId }
+        
+        // If we couldn't find it (possibly because the ID changed), try to use the first server
+        if (server == null && _serverList.value.isNotEmpty()) {
+            server = _serverList.value.first()
+            // Save this selection so we use it next time
+            selectServer(server.id)
+        }
+        
+        _selectedServer.value = server
+        cachedSelectedServer = server
     }
 
     fun selectServer(serverId: String) {
         preferences.edit().putString(PREF_SELECTED_SERVER_ID, serverId).apply()
         loadSelectedServer()
+        
+        // Log selection for debugging
+        val selectedServer = _selectedServer.value
+        if (selectedServer != null) {
+            Log.d(TAG, "Selected server: ${selectedServer.name} (${selectedServer.runpodId})")
+        } else {
+            Log.e(TAG, "Failed to select server with ID: $serverId")
+        }
     }
 
     fun addCustomServer(name: String, runpodId: String, port: Int = 8000): ServerEntry {
+        // Check if a server with the same runpodId already exists
+        val existingServer = _serverList.value.find { it.runpodId == runpodId && it.port == port }
+        if (existingServer != null) {
+            return existingServer
+        }
+        
         val newServer = ServerEntry(
             id = UUID.randomUUID().toString(),
             name = name,
@@ -202,19 +232,34 @@ class ServerManager @Inject constructor(
         val jsonString = Gson().toJson(serverList)
         preferences.edit().putString(PREF_SERVER_LIST, jsonString).apply()
         _serverList.value = serverList
+        
+        Log.d(TAG, "Saved ${serverList.size} servers to preferences")
+        
+        // Make sure selected server is still valid after updating the list
+        val selectedServerId = preferences.getString(PREF_SELECTED_SERVER_ID, null)
+        if (selectedServerId != null && serverList.none { it.id == selectedServerId }) {
+            // Selected server no longer exists in the list, select first one
+            if (serverList.isNotEmpty()) {
+                selectServer(serverList.first().id)
+            }
+        }
     }
 
     private fun getServerListFromPreferences(): List<ServerEntry> {
         val jsonString = preferences.getString(PREF_SERVER_LIST, null)
-        return if (jsonString != null) {
+        val serverList = if (jsonString != null) {
             try {
                 val type = object : TypeToken<List<ServerEntry>>() {}.type
-                Gson().fromJson(jsonString, type)
+                Gson().fromJson<List<ServerEntry>>(jsonString, type)
             } catch (e: Exception) {
+                Log.e(TAG, "Error parsing server list from preferences", e)
                 emptyList()
             }
         } else {
             emptyList()
         }
+        
+        Log.d(TAG, "Loaded ${serverList.size} servers from preferences")
+        return serverList
     }
 }

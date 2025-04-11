@@ -44,6 +44,7 @@ PROMPT_TASKS = (
 
 def generate_text_chunks(prompt: str, text: str) -> str:
     max_len = tokenizer.model_max_length
+    print(f"Max length: {max_len}")
     inputs = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
     prompt_len = inputs.shape[1]
 

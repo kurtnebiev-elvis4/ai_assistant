@@ -57,6 +57,11 @@ object NetworkModule {
             id = UUID.randomUUID().toString(),
             name = "Backup Server 4",
             runpodId = "u9xt9rn2ib2p1i"
+        ),
+        ServerEntry(
+            id = UUID.randomUUID().toString(),
+            name = "Backup Server 5",
+            runpodId = "e1kool62n24bws"
         )
     )
     
@@ -73,7 +78,10 @@ object NetworkModule {
         
         // Initialize with default servers if empty
         runBlocking {
-            if (serverManager.serverList.first().isEmpty()) {
+            val existingServers = serverManager.serverList.first()
+            
+            // Only add default servers if the server list is empty
+            if (existingServers.isEmpty()) {
                 // Add default servers
                 defaultServers.forEach { server ->
                     val id = serverManager.addCustomServer(
@@ -115,7 +123,21 @@ object NetworkModule {
     ): AssistantApi {
         // Get the selected server
         val selectedServer = runBlocking {
-            serverManager.selectedServer.first() ?: defaultServers.first()
+            // Wait for the server list to be loaded and selected server to be initialized
+            val selected = serverManager.selectedServer.first()
+            if (selected != null) {
+                selected
+            } else {
+                // Fallback to the first default server if no server is selected
+                val defaultServer = defaultServers.first()
+                val id = serverManager.addCustomServer(
+                    name = defaultServer.name,
+                    runpodId = defaultServer.runpodId,
+                    port = defaultServer.port
+                ).id
+                serverManager.selectServer(id)
+                serverManager.selectedServer.first()!!
+            }
         }
         
         val retrofit = Retrofit.Builder()
