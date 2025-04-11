@@ -70,13 +70,13 @@ def generate_text_chunks(prompt: str, text: str) -> str:
     for chunk in chunks:
         print(
             f"Prompt tokens: {prompt_len}, Chunk tokens: {len(current_chunk)}, Total: {prompt_len + len(current_chunk)}")
-        chunk_tensor = torch.tensor([chunk], dtype=torch.long, device=model.device)
-        input_ids = torch.cat([inputs, chunk_tensor], dim=1)
+        chunk_input = torch.tensor(chunk, dtype=torch.long, device=model.device).unsqueeze(0)  # shape: [1, len(chunk)]
+        input_ids = torch.cat([inputs, chunk_input], dim=1)
         with model_lock:
             max_output_tokens = min(MAX_RESPONSE_TOKENS, max_len - input_ids.shape[1])
             outputs = model.generate(
                 input_ids=input_ids,
-                attention_mask=attention_mask,
+                attention_mask=torch.ones_like(input_ids),
                 max_new_tokens=max_output_tokens,
                 do_sample=True,
                 temperature=0.6,
