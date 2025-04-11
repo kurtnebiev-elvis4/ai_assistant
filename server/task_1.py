@@ -45,7 +45,9 @@ PROMPT_TASKS = (
 def generate_text_chunks(prompt: str, text: str) -> str:
     max_len = tokenizer.model_max_length
     print(f"Max length: {max_len}")
-    inputs = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
+    encoded_prompt = tokenizer(prompt, return_tensors="pt", padding=True, return_attention_mask=True)
+    inputs = encoded_prompt["input_ids"].to(model.device)
+    attention_mask = encoded_prompt["attention_mask"].to(model.device)
     prompt_len = inputs.shape[1]
 
     transcript_tokens = tokenizer(text, return_tensors="pt").input_ids[0]
@@ -72,10 +74,15 @@ def generate_text_chunks(prompt: str, text: str) -> str:
         input_ids = torch.cat([inputs, chunk_tensor], dim=1)
         with model_lock:
             max_output_tokens = min(MAX_RESPONSE_TOKENS, max_len - input_ids.shape[1])
-            outputs = model.generate(input_ids, max_new_tokens=max_output_tokens,
-                                     do_sample=True,
-                                     temperature=0.6,
-                                     top_p=0.95)
+            outputs = model.generate(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                max_new_tokens=max_output_tokens,
+                do_sample=True,
+                temperature=0.6,
+                top_p=0.95,
+                pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
+            )
             torch.cuda.empty_cache()
         output_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
         trimmed_output = output_text.replace(prompt, "", 1).replace(text, "", 1).lstrip()
