@@ -43,11 +43,13 @@ PROMPT_TASKS = (
 
 
 def generate_text_chunks(prompt: str, text: str) -> str:
+    text = text + "<think>\n"
+
     max_len = tokenizer.model_max_length
     print(f"Max length: {max_len}")
     encoded_prompt = tokenizer(prompt, return_tensors="pt", padding=True, return_attention_mask=True)
     inputs = encoded_prompt["input_ids"].to(model.device)
-    attention_mask = encoded_prompt["attention_mask"].to(model.device)
+    prompt_attention_mask = encoded_prompt["attention_mask"].to(model.device)
     prompt_len = inputs.shape[1]
 
     transcript_tokens = tokenizer(text, return_tensors="pt").input_ids[0]
@@ -72,11 +74,13 @@ def generate_text_chunks(prompt: str, text: str) -> str:
             f"Prompt tokens: {prompt_len}, Chunk tokens: {len(current_chunk)}, Total: {prompt_len + len(current_chunk)}")
         chunk_input = torch.tensor(chunk, dtype=torch.long, device=model.device).unsqueeze(0)  # shape: [1, len(chunk)]
         input_ids = torch.cat([inputs, chunk_input], dim=1)
+        chunk_attention_mask = torch.ones_like(chunk_input)
+        attention_mask = torch.cat([prompt_attention_mask, chunk_attention_mask], dim=1)
         with model_lock:
             max_output_tokens = min(MAX_RESPONSE_TOKENS, max_len - input_ids.shape[1])
             outputs = model.generate(
                 input_ids=input_ids,
-                attention_mask=torch.ones_like(input_ids),
+                attention_mask=attention_mask,
                 max_new_tokens=max_output_tokens,
                 do_sample=True,
                 temperature=0.6,

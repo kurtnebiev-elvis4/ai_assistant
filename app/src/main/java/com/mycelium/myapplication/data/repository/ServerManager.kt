@@ -11,16 +11,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.core.content.edit
+import okhttp3.logging.HttpLoggingInterceptor
 
 private const val PREF_SERVER_LIST = "server_list"
 private const val PREF_SELECTED_SERVER_ID = "selected_server_id"
@@ -32,8 +32,8 @@ class ServerManager @Inject constructor(
     private val preferences: SharedPreferences
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    private val _serverList = MutableStateFlow<List<ServerEntry>>(emptyList())
-    val serverList: StateFlow<List<ServerEntry>> = _serverList.asStateFlow()
+    private val _serverList = MutableStateFlow<Set<ServerEntry>>(emptySet())
+    val serverSet: StateFlow<Set<ServerEntry>> = _serverList.asStateFlow()
 
     private val _selectedServer = MutableStateFlow<ServerEntry?>(null)
     val selectedServer: StateFlow<ServerEntry?> = _selectedServer.asStateFlow()
@@ -54,28 +54,28 @@ class ServerManager @Inject constructor(
 
     private fun loadServerList() {
         val list = getServerListFromPreferences()
-        _serverList.value = list
+        _serverList.value = list.toSet()
     }
 
     private fun loadSelectedServer() {
-        val selectedServerId = preferences.getString(PREF_SELECTED_SERVER_ID, null)
+        val selectedServerUrl = preferences.getString(PREF_SELECTED_SERVER_ID, null)
         
         // Find the selected server by ID
-        var server = _serverList.value.find { it.id == selectedServerId }
+        var server = _serverList.value.find { it.serverUrl == selectedServerUrl }
         
         // If we couldn't find it (possibly because the ID changed), try to use the first server
         if (server == null && _serverList.value.isNotEmpty()) {
             server = _serverList.value.first()
             // Save this selection so we use it next time
-            selectServer(server.id)
+            selectServer(server.serverUrl)
         }
         
         _selectedServer.value = server
         cachedSelectedServer = server
     }
 
-    fun selectServer(serverId: String) {
-        preferences.edit().putString(PREF_SELECTED_SERVER_ID, serverId).apply()
+    fun selectServer(serverUrl: String) {
+        preferences.edit { putString(PREF_SELECTED_SERVER_ID, serverUrl) }
         loadSelectedServer()
         
         // Log selection for debugging
@@ -83,7 +83,7 @@ class ServerManager @Inject constructor(
         if (selectedServer != null) {
             Log.d(TAG, "Selected server: ${selectedServer.name} (${selectedServer.runpodId})")
         } else {
-            Log.e(TAG, "Failed to select server with ID: $serverId")
+            Log.e(TAG, "Failed to select server with ID: $serverUrl")
         }
     }
 
@@ -95,7 +95,6 @@ class ServerManager @Inject constructor(
         }
         
         val newServer = ServerEntry(
-            id = UUID.randomUUID().toString(),
             name = name,
             runpodId = runpodId,
             port = port,
@@ -111,14 +110,14 @@ class ServerManager @Inject constructor(
         saveServerList(updatedList)
 
         // Check health of the new server
-        checkServerHealth(newServer.id)
+        checkServerHealth(newServer.serverUrl)
 
         return newServer
     }
 
     fun updateServer(server: ServerEntry) {
         val updatedList = _serverList.value.toMutableList().apply {
-            val index = indexOfFirst { it.id == server.id }
+            val index = indexOfFirst { it.serverUrl == server.serverUrl }
             if (index >= 0) {
                 set(index, server)
             }
@@ -127,20 +126,20 @@ class ServerManager @Inject constructor(
         saveServerList(updatedList)
     }
 
-    fun deleteServer(serverId: String) {
-        val serverToDelete = _serverList.value.find { it.id == serverId } ?: return
+    fun deleteServer(serverUrl: String) {
+        val serverToDelete = _serverList.value.find { it.serverUrl == serverUrl } ?: return
 
         // Don't allow deleting the last server
         if (_serverList.value.size <= 1) {
             return
         }
 
-        val updatedList = _serverList.value.filter { it.id != serverId }
+        val updatedList = _serverList.value.filter { it.serverUrl != serverUrl }
         saveServerList(updatedList)
 
         // If the selected server was deleted, select the first one
-        if (_selectedServer.value?.id == serverId) {
-            selectServer(updatedList.first().id)
+        if (_selectedServer.value?.serverUrl == serverUrl) {
+            selectServer(updatedList.first().serverUrl)
         }
     }
 
@@ -167,15 +166,15 @@ class ServerManager @Inject constructor(
         }
     }
 
-    fun checkServerHealth(serverId: String) {
+    fun checkServerHealth(serverUrl: String) {
         coroutineScope.launch {
-            val server = _serverList.value.find { it.id == serverId } ?: return@launch
+            val server = _serverList.value.find { it.serverUrl == serverUrl } ?: return@launch
 
             try {
                 val updatedServer = checkServerHealthStatus(server)
 
                 val updatedList = _serverList.value.toMutableList().apply {
-                    val index = indexOfFirst { it.id == serverId }
+                    val index = indexOfFirst { it.serverUrl == serverUrl }
                     if (index >= 0) {
                         set(index, updatedServer)
                     }
@@ -192,10 +191,14 @@ class ServerManager @Inject constructor(
 
     private suspend fun checkServerHealthStatus(server: ServerEntry): ServerEntry {
         return try {
+            val logging = HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            }
             val client = OkHttpClient.Builder()
                 .connectTimeout(HEALTH_CHECK_TIMEOUT, TimeUnit.SECONDS)
                 .readTimeout(HEALTH_CHECK_TIMEOUT, TimeUnit.SECONDS)
                 .writeTimeout(HEALTH_CHECK_TIMEOUT, TimeUnit.SECONDS)
+                .addInterceptor(logging)
                 .build()
 
             val retrofit = Retrofit.Builder()
@@ -231,16 +234,16 @@ class ServerManager @Inject constructor(
     private fun saveServerList(serverList: List<ServerEntry>) {
         val jsonString = Gson().toJson(serverList)
         preferences.edit().putString(PREF_SERVER_LIST, jsonString).apply()
-        _serverList.value = serverList
+        _serverList.value = serverList.toSet()
         
         Log.d(TAG, "Saved ${serverList.size} servers to preferences")
         
         // Make sure selected server is still valid after updating the list
         val selectedServerId = preferences.getString(PREF_SELECTED_SERVER_ID, null)
-        if (selectedServerId != null && serverList.none { it.id == selectedServerId }) {
+        if (selectedServerId != null && serverList.none { it.serverUrl == selectedServerId }) {
             // Selected server no longer exists in the list, select first one
             if (serverList.isNotEmpty()) {
-                selectServer(serverList.first().id)
+                selectServer(serverList.first().serverUrl)
             }
         }
     }

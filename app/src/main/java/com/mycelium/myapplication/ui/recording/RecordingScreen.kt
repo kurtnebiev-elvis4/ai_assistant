@@ -155,7 +155,9 @@ fun RecordingScreen(
 
     // Show server selection dialog
     if (serverUiState.isShowingDialog) {
-        if (serverUiState.newServerName.isNotEmpty() || serverUiState.newServerRunpodId.isNotEmpty()) {
+        if (serverUiState.newServerEntry?.name?.isNotEmpty() == true ||
+            serverUiState.newServerEntry?.runpodId?.isNotEmpty() == true
+        ) {
             // Show server form dialog
             ServerFormDialog(
                 state = serverUiState,

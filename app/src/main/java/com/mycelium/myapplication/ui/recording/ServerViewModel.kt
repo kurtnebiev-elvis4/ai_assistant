@@ -10,9 +10,6 @@ import common.push
 import common.uiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,9 +18,7 @@ data class ServerUiState(
     val servers: List<ServerEntry> = emptyList(),
     val selectedServer: ServerEntry? = null,
     val isShowingDialog: Boolean = false,
-    val newServerName: String = "",
-    val newServerRunpodId: String = "",
-    val newServerPort: String = "8000",
+    val newServerEntry: ServerEntry? = null,
     val isEditMode: Boolean = false,
     val editServerId: String = "",
     val errorMessage: String = "",
@@ -38,8 +33,8 @@ class ServerViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            serverManager.serverList.collectLatest { servers ->
-                push(uiState.copy(servers = servers))
+            serverManager.serverSet.collectLatest { servers ->
+                push(uiState.copy(servers = servers.toList()))
             }
         }
 
@@ -48,19 +43,19 @@ class ServerViewModel @Inject constructor(
                 push(uiState.copy(selectedServer = server))
             }
         }
-        
+
         viewModelScope.launch {
             serverManager.isCheckingHealth.collectLatest { isChecking ->
                 push(uiState.copy(isCheckingHealth = isChecking))
             }
         }
-        
+
         // Initial health check
         checkAllServersHealth()
-        
+
         // Periodic health checks
         viewModelScope.launch {
-            while(true) {
+            while (true) {
                 delay(60000) // Check every minute
                 checkAllServersHealth()
             }
@@ -72,9 +67,7 @@ class ServerViewModel @Inject constructor(
             uiState.copy(
                 isShowingDialog = true,
                 isEditMode = false,
-                newServerName = "",
-                newServerRunpodId = "",
-                newServerPort = "8000",
+                newServerEntry = ServerEntry("", "", 8000),
                 errorMessage = ""
             )
         )
@@ -85,10 +78,8 @@ class ServerViewModel @Inject constructor(
             uiState.copy(
                 isShowingDialog = true,
                 isEditMode = true,
-                editServerId = server.id,
-                newServerName = server.name,
-                newServerRunpodId = server.runpodId,
-                newServerPort = server.port.toString(),
+                editServerId = server.serverUrl,
+                newServerEntry = server.copy(),
                 errorMessage = ""
             )
         )
@@ -104,45 +95,30 @@ class ServerViewModel @Inject constructor(
     }
 
     fun updateNewServerName(name: String) {
-        push(uiState.copy(newServerName = name))
+        push(uiState.copy(newServerEntry = uiState.newServerEntry?.copy(name = name)))
     }
 
     fun updateNewServerRunpodId(runpodId: String) {
-        push(uiState.copy(newServerRunpodId = runpodId))
+        push(uiState.copy(newServerEntry = uiState.newServerEntry?.copy(runpodId = runpodId)))
     }
 
     fun updateNewServerPort(port: String) {
-        push(uiState.copy(newServerPort = port))
+        push(uiState.copy(newServerEntry = uiState.newServerEntry?.copy(port = port.toInt())))
     }
 
     fun saveServer() {
         val state = uiState
-        val name = state.newServerName.trim()
-        val runpodId = state.newServerRunpodId.trim()
-        val portString = state.newServerPort.trim()
+        val name = state.newServerEntry?.name?.trim()
+        val runpodId = state.newServerEntry?.runpodId?.trim()
+        val port = state.newServerEntry?.port
 
-        if (name.isEmpty() || runpodId.isEmpty()) {
-            push(
-                uiState.copy(
-                    errorMessage = "Server name and RunPod ID are required"
-                )
-            )
-            return
-        }
-
-        val port = try {
-            portString.toInt()
-        } catch (e: NumberFormatException) {
-            push(
-                uiState.copy(
-                    errorMessage = "Port must be a number"
-                )
-            )
+        if (name?.isEmpty() != false || runpodId?.isEmpty() != false || port == null) {
+            push(uiState.copy(errorMessage = "Server name and RunPod ID and port are required"))
             return
         }
 
         if (state.isEditMode) {
-            val serverToUpdate = state.servers.find { it.id == state.editServerId } ?: return
+            val serverToUpdate = state.servers.find { it.serverUrl == state.editServerId } ?: return
             val updatedServer = serverToUpdate.copy(
                 name = name,
                 runpodId = runpodId,
@@ -151,30 +127,30 @@ class ServerViewModel @Inject constructor(
             serverManager.updateServer(updatedServer)
         } else {
             val newServer = serverManager.addCustomServer(name, runpodId, port)
-            serverManager.selectServer(newServer.id)
+            serverManager.selectServer(newServer.serverUrl)
         }
 
         hideDialog()
     }
 
     fun selectServer(server: ServerEntry) {
-        serverManager.selectServer(server.id)
+        serverManager.selectServer(server.serverUrl)
     }
 
     fun deleteServer(server: ServerEntry) {
         if (server.isCustom) {
-            serverManager.deleteServer(server.id)
+            serverManager.deleteServer(server.serverUrl)
         }
     }
-    
+
     fun checkServerHealth(serverId: String) {
         serverManager.checkServerHealth(serverId)
     }
-    
+
     fun checkAllServersHealth() {
         serverManager.checkAllServersHealth()
     }
-    
+
     fun refreshHealthStatus() {
         viewModelScope.launch {
             checkAllServersHealth()

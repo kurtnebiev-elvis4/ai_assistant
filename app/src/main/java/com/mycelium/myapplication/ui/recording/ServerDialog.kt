@@ -181,7 +181,7 @@ fun ServerListDialog(
 
                 LazyColumn {
                     items(state.servers) { server ->
-                        val isSelected = state.selectedServer?.id == server.id
+                        val isSelected = state.selectedServer?.serverUrl == server.serverUrl
 
                         ServerItem(onSelectServer, server, isSelected, onEditServer, onDeleteServer)
 
@@ -212,7 +212,7 @@ fun ServerListDialog(
 fun ServerItemPreview() {
     ServerItem(
         onSelectServer = { },
-        server = ServerEntry(id = "", name = "name", runpodId = "url", port = 8000, true, true),
+        server = ServerEntry(name = "name", runpodId = "url", port = 8000, true, true),
         isSelected = true,
         onEditServer = {},
         onDeleteServer = { }
@@ -285,13 +285,6 @@ private fun ServerItem(
                     )
                 }
             }
-
-
-        }
-        Row(
-            modifier = Modifier.align(Alignment.End),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
@@ -299,6 +292,12 @@ private fun ServerItem(
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
+        }
+        Row(
+            modifier = Modifier.align(Alignment.End),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
 
             if (server.isCustom) {
                 IconButton(onClick = { onEditServer(server) }) {
@@ -356,7 +355,7 @@ private fun AddServerItem(
 ) {
     Column {
         OutlinedTextField(
-            value = state.newServerName,
+            value = state.newServerEntry?.name.orEmpty(),
             onValueChange = onNameChange,
             label = { Text("Server Name") },
             modifier = Modifier.fillMaxWidth()
@@ -365,7 +364,7 @@ private fun AddServerItem(
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = state.newServerRunpodId,
+            value = state.newServerEntry?.runpodId.orEmpty(),
             onValueChange = onRunpodIdChange,
             label = { Text("RunPod ID") },
             modifier = Modifier.fillMaxWidth()
@@ -374,7 +373,7 @@ private fun AddServerItem(
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = state.newServerPort,
+            value = state.newServerEntry?.port?.toString().orEmpty(),
             onValueChange = onPortChange,
             label = { Text("Port") },
             modifier = Modifier.fillMaxWidth()
