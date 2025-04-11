@@ -23,8 +23,8 @@ BASE_PROMPT_HEADER = (
 PROMPT_SUMMARIZE = (
         BASE_PROMPT_HEADER +
         "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, summarize the key points in a concise paragraph. "
-        "Do not add any information that is not explicitly mentioned. If the content is not a meeting or lacks meaningful discussion (e.g., random text, unrelated talk), return the message: 'no meaningful content found'.\n"
-        "Meeting transcript starts below:\n"
+        "Do not add any information that is not explicitly mentioned.\n"
+        "Transcript starts below:\n"
 )
 PROMPT_DECISIONS = (
         BASE_PROMPT_HEADER +

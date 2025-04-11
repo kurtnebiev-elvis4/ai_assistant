@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -26,6 +27,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,8 +70,12 @@ fun ResultScreen(
                 title = { Text("Result Details") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        // You'll need to import the icon: Icons.Default.ArrowBack
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.reloadResultStatus(recordingId) }) {
+                        Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                     }
                 }
             )
@@ -206,8 +212,13 @@ fun ResultScreen(
                                         .fillMaxWidth()
                                         .padding(top = 8.dp)
                                 ) {
+                                    var expandedThink by remember { mutableStateOf(false) }
                                     Column(modifier = Modifier.padding(16.dp)) {
                                         if (collapsiblePart.isNotBlank()) {
+                                            TextButton(onClick = { expandedThink = !expandedThink }) {
+                                                Text(if (expandedThink) "Скрыть размышления" else "Показать размышления")
+                                            }
+                                            if (expandedThink) {
                                             Text(
                                                 text = collapsiblePart.trim(),
                                                 modifier = Modifier
@@ -217,7 +228,7 @@ fun ResultScreen(
                                                 modifier = Modifier
                                                     .padding(vertical = 8.dp)
                                                     .fillMaxWidth()
-                                            )
+                                            )}
                                         }
                                         Text(
                                             text = visiblePart.trim(),

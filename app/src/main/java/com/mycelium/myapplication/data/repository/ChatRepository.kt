@@ -49,7 +49,7 @@ class ChatRepositoryImpl @Inject constructor(
             disconnect()
         }
         
-        val wsUrl = "wss://${server.runpodId}-${server.port}.proxy.runpod.net/ws/chat_thread"
+        val wsUrl = "wss://${server.runpodId}-${server.port}.proxy.runpod.net/ws/${chatId}"
         
         val request = Request.Builder()
             .url(wsUrl)

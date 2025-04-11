@@ -262,4 +262,8 @@ class RecordingRepository @Inject constructor(
             }
         }
     }
+
+    suspend fun clearResult(sessionId: String) {
+        recordingResultDao.deleteResultsForRecording(sessionId)
+    }
 }
