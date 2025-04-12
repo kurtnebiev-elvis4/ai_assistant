@@ -40,6 +40,14 @@ PROMPT_TASKS = (
         "If the content is not a meeting or lacks meaningful discussion, return the message: 'no meaningful content found'.\n"
         "Meeting transcript starts below:\n"
 )
+PROMPT_READY = (
+        BASE_PROMPT_HEADER +
+        "Instruction (in English): If the following transcript contains a structured discussion such as a meeting or collaborative work session, identify and list all items that were marked as complete or ready. "
+        "This may include completed tasks, finished components, finalized decisions, or any work that was reported as done. "
+        "Use the same language as the transcript. Be clear and avoid repeating unnecessary details. "
+        "If nothing is clearly marked as complete, return the message: 'no ready items found'.\n"
+        "Transcript starts below:\n"
+)
 
 
 def generate_text_chunks(prompt: str, text: str) -> str:
@@ -140,3 +148,19 @@ def extract_tasks_from_transcript(file_id: str, transcript_path: str) -> list:
     with open(output_path, "w", encoding="utf-8") as out:
         out.write("\n".join(tasks))
     return tasks
+
+
+def extract_ready_items_from_transcript(file_id: str, transcript_path: str) -> list:
+    """Extracts items marked as done or ready during the meeting."""
+    with open(transcript_path, "r", encoding="utf-8") as f:
+        whisper_text = f.read()
+    lang = detect(whisper_text)
+    prompt = PROMPT_READY.format(lang=lang.upper())
+
+    decoded_text = generate_text_chunks(prompt, whisper_text)
+
+    ready_items = [line.strip("-• ") for line in decoded_text.split("\n") if line.strip()]
+    output_path = os.path.join(UPLOAD_DIR, f"{file_id}_ready.txt")
+    with open(output_path, "w", encoding="utf-8") as out:
+        out.write("\n".join(ready_items))
+    return ready_items

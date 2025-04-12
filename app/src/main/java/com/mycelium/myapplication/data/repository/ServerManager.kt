@@ -32,8 +32,7 @@ class ServerManager @Inject constructor(
     private val preferences: SharedPreferences
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    private val _serverList = MutableStateFlow<Set<ServerEntry>>(emptySet())
-    val serverSet: StateFlow<Set<ServerEntry>> = _serverList.asStateFlow()
+    var serverSet: Set<ServerEntry> = emptySet()
 
     private val _selectedServer = MutableStateFlow<ServerEntry?>(null)
     val selectedServer: StateFlow<ServerEntry?> = _selectedServer.asStateFlow()
@@ -48,24 +47,20 @@ class ServerManager @Inject constructor(
     private var healthCheckJob: Job? = null
 
     init {
-        loadServerList()
+        serverSet = getServerListFromPreferences().toSet()
         loadSelectedServer()
     }
 
-    private fun loadServerList() {
-        val list = getServerListFromPreferences()
-        _serverList.value = list.toSet()
-    }
 
     private fun loadSelectedServer() {
         val selectedServerUrl = preferences.getString(PREF_SELECTED_SERVER_ID, null)
         
         // Find the selected server by ID
-        var server = _serverList.value.find { it.serverUrl == selectedServerUrl }
+        var server = serverSet.find { it.serverUrl == selectedServerUrl }
         
         // If we couldn't find it (possibly because the ID changed), try to use the first server
-        if (server == null && _serverList.value.isNotEmpty()) {
-            server = _serverList.value.first()
+        if (server == null && serverSet.isNotEmpty()) {
+            server = serverSet.first()
             // Save this selection so we use it next time
             selectServer(server.serverUrl)
         }
@@ -89,7 +84,7 @@ class ServerManager @Inject constructor(
 
     fun addCustomServer(name: String, runpodId: String, port: Int = 8000): ServerEntry {
         // Check if a server with the same runpodId already exists
-        val existingServer = _serverList.value.find { it.runpodId == runpodId && it.port == port }
+        val existingServer = serverSet.find { it.runpodId == runpodId && it.port == port }
         if (existingServer != null) {
             return existingServer
         }
@@ -103,7 +98,7 @@ class ServerManager @Inject constructor(
             lastChecked = System.currentTimeMillis()
         )
 
-        val updatedList = _serverList.value.toMutableList().apply {
+        val updatedList = serverSet.toMutableList().apply {
             add(newServer)
         }
 
@@ -116,7 +111,7 @@ class ServerManager @Inject constructor(
     }
 
     fun updateServer(server: ServerEntry) {
-        val updatedList = _serverList.value.toMutableList().apply {
+        val updatedList = serverSet.toMutableList().apply {
             val index = indexOfFirst { it.serverUrl == server.serverUrl }
             if (index >= 0) {
                 set(index, server)
@@ -127,14 +122,13 @@ class ServerManager @Inject constructor(
     }
 
     fun deleteServer(serverUrl: String) {
-        val serverToDelete = _serverList.value.find { it.serverUrl == serverUrl } ?: return
 
         // Don't allow deleting the last server
-        if (_serverList.value.size <= 1) {
+        if (serverSet.size <= 1) {
             return
         }
 
-        val updatedList = _serverList.value.filter { it.serverUrl != serverUrl }
+        val updatedList = serverSet.filter { it.serverUrl != serverUrl }
         saveServerList(updatedList)
 
         // If the selected server was deleted, select the first one
@@ -151,7 +145,7 @@ class ServerManager @Inject constructor(
             _isCheckingHealth.value = true
 
             try {
-                val updatedServers = _serverList.value.map { server ->
+                val updatedServers = serverSet.map { server ->
                     checkServerHealthStatus(server)
                 }
 
@@ -168,12 +162,12 @@ class ServerManager @Inject constructor(
 
     fun checkServerHealth(serverUrl: String) {
         coroutineScope.launch {
-            val server = _serverList.value.find { it.serverUrl == serverUrl } ?: return@launch
+            val server = serverSet.find { it.serverUrl == serverUrl } ?: return@launch
 
             try {
                 val updatedServer = checkServerHealthStatus(server)
 
-                val updatedList = _serverList.value.toMutableList().apply {
+                val updatedList = serverSet.toMutableList().apply {
                     val index = indexOfFirst { it.serverUrl == serverUrl }
                     if (index >= 0) {
                         set(index, updatedServer)
@@ -234,7 +228,7 @@ class ServerManager @Inject constructor(
     private fun saveServerList(serverList: List<ServerEntry>) {
         val jsonString = Gson().toJson(serverList)
         preferences.edit().putString(PREF_SERVER_LIST, jsonString).apply()
-        _serverList.value = serverList.toSet()
+        serverSet = serverList.toSet()
         
         Log.d(TAG, "Saved ${serverList.size} servers to preferences")
         

@@ -1,5 +1,7 @@
 package com.mycelium.myapplication.ui.recording
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,11 +23,48 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.mycelium.myapplication.data.model.ChunkUploadQueue
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.model.UploadStatus
+import common.provideUIState
 import java.text.SimpleDateFormat
 import java.util.*
+
+@Composable
+fun RecordListScreen(
+    listViewModel: RecordListViewModel = hiltViewModel(),
+    onNavigateToResult: (String) -> Unit,
+) {
+    val recordListState by listViewModel.provideUIState().collectAsState()
+    val shareLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { listViewModel.resetShareIntent() }
+
+    // Handle the share intent if available
+    LaunchedEffect(recordListState.shareIntent) {
+        recordListState.shareIntent?.let { intent ->
+            shareLauncher.launch(Intent.createChooser(intent, "Share Recordings"))
+        }
+    }
+
+    RecordingList(
+        recordings = recordListState.records,
+        onDeleteRecording = listViewModel::deleteRecording,
+        onPlayRecording = listViewModel::playRecording,
+        onShareRecording = { recording ->
+            listViewModel.shareRecordingChunks(recording)
+        },
+        onViewResults = { recording ->
+            onNavigateToResult(recording.id)
+        },
+        onToggleChunksView = listViewModel::toggleChunksView,
+        onRetryChunkUpload = listViewModel::retryChunkUpload,
+        currentPlayingSession = recordListState.currentPlayingSession,
+        chunksMap = recordListState.chunksMap
+    )
+
+}
 
 @Composable
 fun RecordingList(

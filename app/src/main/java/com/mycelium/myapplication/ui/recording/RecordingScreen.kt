@@ -91,7 +91,6 @@ fun movingAverage(data: List<Short>, windowSize: Int = 5): List<Short> {
 fun RecordingScreenPreview() {
     RecordingScreen(
         recordingState = RecordingState(time = "10:00"),
-        recordListState = RecordListState(),
         waveform = emptyList(),
         serverUiState = ServerUiState(),
         onRequestPermission = {},
@@ -101,18 +100,9 @@ fun RecordingScreenPreview() {
             override fun unpauseRecording() {}
             override fun startRecording() {}
         },
-        listCallback = object : RecordListCallback {
-            override fun deleteRecording(session: RecordingSession) {}
-            override fun shareRecordingChunks(recording: RecordingSession) {}
-            override fun playRecording(recording: RecordingSession) {}
-            override fun toggleChunksView(recording: RecordingSession) {}
-            override fun retryChunkUpload(chunk: List<ChunkUploadQueue>) {}
-        },
         hideServerDialog = {},
         showAddServerDialog = {},
-        onNavigateToResult = {},
-        onNavigateToChat = {},
-        onRetryChunkUpload = {})
+    )
 }
 
 @Composable
@@ -121,8 +111,6 @@ fun RecordingScreen(
     listViewModel: RecordListViewModel = hiltViewModel(),
     serverViewModel: ServerViewModel = hiltViewModel(),
     onRequestPermission: () -> Unit,
-    onNavigateToResult: (String) -> Unit,
-    onNavigateToChat: () -> Unit = {}
 ) {
     val recordingState by viewModel.provideUIState().collectAsState()
     val recordListState by listViewModel.provideUIState().collectAsState()
@@ -183,39 +171,29 @@ fun RecordingScreen(
 
     RecordingScreen(
         recordingState,
-        recordListState,
         serverUiState,
         waveform,
         onRequestPermission,
         viewModel,
-        listViewModel,
         { serverViewModel.hideDialog() },
         { serverViewModel.showAddServerDialog() },
-        onNavigateToResult,
-        onNavigateToChat,
-        listViewModel::retryChunkUpload
     )
 }
 
 @Composable
 fun RecordingScreen(
     recordingState: RecordingState,
-    recordListState: RecordListState,
     serverUiState: ServerUiState,
     waveform: List<Short>,
     onRequestPermission: () -> Unit,
     callback: RecordingScreenCallback,
-    listCallback: RecordListCallback,
     hideServerDialog: () -> Unit,
     showAddServerDialog: () -> Unit,
-    onNavigateToResult: (String) -> Unit,
-    onNavigateToChat: () -> Unit,
-    onRetryChunkUpload: (List<ChunkUploadQueue>) -> Unit = {}
 ) {
 
     Scaffold(
         topBar = {
-            var expanded by remember { mutableStateOf(false) }
+//            var expanded by remember { mutableStateOf(false) }
 
             Box(
                 modifier = Modifier
@@ -231,74 +209,14 @@ fun RecordingScreen(
                         style = MaterialTheme.typography.titleLarge
                     )
                 }
-
-                Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-                    IconButton(onClick = { expanded = true }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Menu"
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Server") },
-                            onClick = {
-                                expanded = false
-                                hideServerDialog()
-                                showAddServerDialog()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Chat") },
-                            onClick = {
-                                expanded = false
-                                onNavigateToChat()
-                            }
-                        )
-                    }
-                }
             }
         },
-        floatingActionButton = {
-            Column {
-                ServerButton(
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    onClick = {
-                        hideServerDialog()
-                        showAddServerDialog()
-                    }
-                )
-                ChatButton(
-                    modifier = Modifier.padding(bottom = 80.dp),
-                    onClick = onNavigateToChat
-                )
-            }
-        }
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            RecordingList(
-                recordings = recordListState.records,
-                onDeleteRecording = listCallback::deleteRecording,
-                onPlayRecording = listCallback::playRecording,
-                onShareRecording = { recording ->
-                    listCallback.shareRecordingChunks(recording)
-                },
-                onViewResults = { recording ->
-                    onNavigateToResult(recording.id)
-                },
-                onToggleChunksView = listCallback::toggleChunksView,
-                onRetryChunkUpload = onRetryChunkUpload,
-                currentPlayingSession = recordListState.currentPlayingSession,
-                chunksMap = recordListState.chunksMap
-            )
 
             if (recordingState.error.isNotEmpty()) {
                 Text(

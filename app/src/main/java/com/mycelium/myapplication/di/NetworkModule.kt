@@ -69,7 +69,7 @@ object NetworkModule {
 
         // Initialize with default servers if empty
         runBlocking {
-            val existingServers = serverManager.serverSet.first()
+            val existingServers = serverManager.serverSet
             defaultServers.forEach { server ->
                 if(existingServers.contains(server)) return@forEach
                 val serverUrl = serverManager.addCustomServer(

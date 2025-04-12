@@ -9,5 +9,6 @@ RESULT_TYPES = {
     "transcript": "",
     "summary": "_summary",
     "tasks": "_tasks",
-    "decisions": "_decisions"
+    "decisions": "_decisions",
+    "ready": "_ready"
 }

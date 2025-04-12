@@ -33,9 +33,7 @@ class ServerViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            serverManager.serverSet.collectLatest { servers ->
-                push(uiState.copy(servers = servers.toList()))
-            }
+            push(uiState.copy(servers = serverManager.serverSet.toList()))
         }
 
         viewModelScope.launch {

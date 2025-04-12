@@ -62,14 +62,12 @@ import java.util.Locale
 fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
     serverViewModel: ServerViewModel = hiltViewModel(),
-    onNavigateUp: () -> Unit,
     showServerDialog: () -> Unit = { serverViewModel.showAddServerDialog() }
 ) {
     val chatUiState by viewModel.provideUIState().collectAsState()
     val serverUiState by serverViewModel.provideUIState().collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
     val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
 
     // Scroll to bottom when new messages arrive
     LaunchedEffect(chatUiState.messages.size) {
@@ -90,99 +88,80 @@ fun ChatScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("AI Chat") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        serverUiState.selectedServer?.let { selectedServer ->
-                            ServerInfo(
-                                server = selectedServer,
-                                isConnected = chatUiState.isConnected,
-                                onClick = showServerDialog
-                            )
-                        }
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(end = 8.dp)
         ) {
-            // Message list
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                state = listState
-            ) {
-                items(chatUiState.messages) { message ->
-                    MessageItem(message = message)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+            serverUiState.selectedServer?.let { selectedServer ->
+                ServerInfo(
+                    server = selectedServer,
+                    isConnected = chatUiState.isConnected,
+                    onClick = showServerDialog
+                )
             }
+        }
+        // Message list
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            state = listState
+        ) {
+            items(chatUiState.messages) { message ->
+                MessageItem(message = message)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
 
-            // Bottom typing area
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 8.dp
+        // Bottom typing area
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shadowElevation = 8.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = chatUiState.inputText,
-                        onValueChange = { viewModel.updateInputText(it) },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text("Type a message...") },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(
-                            onSend = {
-                                viewModel.sendMessage(chatUiState.inputText)
-                                keyboardController?.hide()
-                            }
-                        ),
-                        shape = RoundedCornerShape(24.dp),
-                        maxLines = 3
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    IconButton(
-                        onClick = {
+                OutlinedTextField(
+                    value = chatUiState.inputText,
+                    onValueChange = { viewModel.updateInputText(it) },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Type a message...") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(
+                        onSend = {
                             viewModel.sendMessage(chatUiState.inputText)
                             keyboardController?.hide()
-                        },
-                        enabled = chatUiState.inputText.isNotBlank() && !chatUiState.isLoading
-                    ) {
-                        if (chatUiState.isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Send,
-                                contentDescription = "Send",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
                         }
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    maxLines = 3
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                IconButton(
+                    onClick = {
+                        viewModel.sendMessage(chatUiState.inputText)
+                        keyboardController?.hide()
+                    },
+                    enabled = chatUiState.inputText.isNotBlank() && !chatUiState.isLoading
+                ) {
+                    if (chatUiState.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = "Send",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
