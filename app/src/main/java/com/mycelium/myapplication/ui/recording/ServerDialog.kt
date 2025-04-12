@@ -47,9 +47,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.mycelium.myapplication.data.model.ServerEntry
+import com.mycelium.myapplication.data.model.ServerStatus
 
 @Composable
-fun ServerIcon(serverEntry: ServerEntry, isSelected: Boolean, modifier: Modifier = Modifier) {
+fun ServerIcon(
+    serverEntry: ServerEntry,
+    serverStatus: ServerStatus,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier
+) {
     Box(
         modifier = modifier
             .size(40.dp)
@@ -57,7 +63,7 @@ fun ServerIcon(serverEntry: ServerEntry, isSelected: Boolean, modifier: Modifier
             .background(
                 when {
                     isSelected -> MaterialTheme.colorScheme.primary
-                    serverEntry.isOnline -> MaterialTheme.colorScheme.surfaceVariant
+                    serverStatus.isOnline -> MaterialTheme.colorScheme.surfaceVariant
                     else -> MaterialTheme.colorScheme.errorContainer
                 }
             ),
@@ -68,7 +74,7 @@ fun ServerIcon(serverEntry: ServerEntry, isSelected: Boolean, modifier: Modifier
             style = MaterialTheme.typography.titleMedium,
             color = when {
                 isSelected -> MaterialTheme.colorScheme.onPrimary
-                serverEntry.isOnline -> MaterialTheme.colorScheme.onSurfaceVariant
+                serverStatus.isOnline -> MaterialTheme.colorScheme.onSurfaceVariant
                 else -> MaterialTheme.colorScheme.onErrorContainer
             }
         )
@@ -180,10 +186,13 @@ fun ServerListDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 LazyColumn {
-                    items(state.servers) { server ->
+                    items(state.servers.keys.toList()) { server ->
                         val isSelected = state.selectedServer?.serverUrl == server.serverUrl
 
-                        ServerItem(onSelectServer, server, isSelected, onEditServer, onDeleteServer)
+                        ServerItem(
+                            onSelectServer, server, state.servers[server] ?: ServerStatus(),
+                            isSelected, onEditServer, onDeleteServer
+                        )
 
                         Divider()
                     }
@@ -212,7 +221,8 @@ fun ServerListDialog(
 fun ServerItemPreview() {
     ServerItem(
         onSelectServer = { },
-        server = ServerEntry(name = "name", runpodId = "url", port = 8000, true, true),
+        server = ServerEntry(name = "name", runpodId = "url", port = 8000),
+        status = ServerStatus(isOnline = true),
         isSelected = true,
         onEditServer = {},
         onDeleteServer = { }
@@ -223,6 +233,7 @@ fun ServerItemPreview() {
 private fun ServerItem(
     onSelectServer: (ServerEntry) -> Unit,
     server: ServerEntry,
+    status: ServerStatus,
     isSelected: Boolean,
     onEditServer: (ServerEntry) -> Unit,
     onDeleteServer: (ServerEntry) -> Unit
@@ -235,10 +246,20 @@ private fun ServerItem(
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ServerIcon(
-                serverEntry = server,
-                isSelected = isSelected
-            )
+            Box {
+                ServerIcon(
+                    serverEntry = server,
+                    serverStatus = status,
+                    isSelected = isSelected
+                )
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Selected",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -263,7 +284,7 @@ private fun ServerItem(
                         modifier = Modifier
                             .size(8.dp)
                             .background(
-                                color = if (server.isOnline) {
+                                color = if (status.isOnline) {
                                     Color.Green
                                 } else {
                                     MaterialTheme.colorScheme.error
@@ -275,9 +296,9 @@ private fun ServerItem(
                     Spacer(modifier = Modifier.width(4.dp))
 
                     Text(
-                        text = if (server.isOnline) "Online" else "Offline",
+                        text = if (status.isOnline) "Online" else "Offline",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (server.isOnline) {
+                        color = if (status.isOnline) {
                             Color.Green
                         } else {
                             MaterialTheme.colorScheme.error
@@ -285,34 +306,23 @@ private fun ServerItem(
                     )
                 }
             }
-            if (isSelected) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
         }
         Row(
             modifier = Modifier.align(Alignment.End),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(onClick = { onEditServer(server) }) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit server"
+                )
+            }
 
-
-            if (server.isCustom) {
-                IconButton(onClick = { onEditServer(server) }) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit server"
-                    )
-                }
-
-                IconButton(onClick = { onDeleteServer(server) }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete server"
-                    )
-                }
+            IconButton(onClick = { onDeleteServer(server) }) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete server"
+                )
             }
         }
     }

@@ -1,12 +1,14 @@
 package com.mycelium.myapplication.data.model
 
+data class ServerStatus(
+    val isOnline: Boolean = false,
+    val lastChecked: Long = 0
+)
+
 data class ServerEntry(
     val name: String,
     val runpodId: String,
     val port: Int = 8000,
-    val isCustom: Boolean = false,
-    val isOnline: Boolean = false,
-    val lastChecked: Long = 0
 ) {
     val serverUrl: String
         get() = "https://$runpodId-$port.proxy.runpod.net/"

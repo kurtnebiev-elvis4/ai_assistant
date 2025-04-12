@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.core.content.edit
+import com.mycelium.myapplication.data.model.ServerStatus
 import okhttp3.logging.HttpLoggingInterceptor
 
 private const val PREF_SERVER_LIST = "server_list"
@@ -32,11 +33,11 @@ class ServerManager @Inject constructor(
     private val preferences: SharedPreferences
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    var serverSet: Set<ServerEntry> = emptySet()
+    val serverMap = mutableMapOf<ServerEntry, ServerStatus>()
 
     private val _selectedServer = MutableStateFlow<ServerEntry?>(null)
     val selectedServer: StateFlow<ServerEntry?> = _selectedServer.asStateFlow()
-    
+
     // Keep a cached reference of the previously selected server
     // This is useful for when we need to recreate the API client
     private var cachedSelectedServer: ServerEntry? = null
@@ -47,24 +48,24 @@ class ServerManager @Inject constructor(
     private var healthCheckJob: Job? = null
 
     init {
-        serverSet = getServerListFromPreferences().toSet()
+        serverMap.putAll(getServerListFromPreferences().associate { it to ServerStatus() })
         loadSelectedServer()
     }
 
 
     private fun loadSelectedServer() {
         val selectedServerUrl = preferences.getString(PREF_SELECTED_SERVER_ID, null)
-        
+
         // Find the selected server by ID
-        var server = serverSet.find { it.serverUrl == selectedServerUrl }
-        
+        var server = serverMap.keys.find { it.serverUrl == selectedServerUrl }
+
         // If we couldn't find it (possibly because the ID changed), try to use the first server
-        if (server == null && serverSet.isNotEmpty()) {
-            server = serverSet.first()
+        if (server == null && serverMap.isNotEmpty()) {
+            server = serverMap.keys.first()
             // Save this selection so we use it next time
             selectServer(server.serverUrl)
         }
-        
+
         _selectedServer.value = server
         cachedSelectedServer = server
     }
@@ -72,7 +73,7 @@ class ServerManager @Inject constructor(
     fun selectServer(serverUrl: String) {
         preferences.edit { putString(PREF_SELECTED_SERVER_ID, serverUrl) }
         loadSelectedServer()
-        
+
         // Log selection for debugging
         val selectedServer = _selectedServer.value
         if (selectedServer != null) {
@@ -84,21 +85,18 @@ class ServerManager @Inject constructor(
 
     fun addCustomServer(name: String, runpodId: String, port: Int = 8000): ServerEntry {
         // Check if a server with the same runpodId already exists
-        val existingServer = serverSet.find { it.runpodId == runpodId && it.port == port }
+        val existingServer = serverMap.keys.find { it.runpodId == runpodId && it.port == port }
         if (existingServer != null) {
             return existingServer
         }
-        
+
         val newServer = ServerEntry(
             name = name,
             runpodId = runpodId,
             port = port,
-            isCustom = true,
-            isOnline = false,
-            lastChecked = System.currentTimeMillis()
         )
 
-        val updatedList = serverSet.toMutableList().apply {
+        val updatedList = serverMap.keys.toMutableList().apply {
             add(newServer)
         }
 
@@ -111,7 +109,7 @@ class ServerManager @Inject constructor(
     }
 
     fun updateServer(server: ServerEntry) {
-        val updatedList = serverSet.toMutableList().apply {
+        val updatedList = serverMap.keys.toMutableList().apply {
             val index = indexOfFirst { it.serverUrl == server.serverUrl }
             if (index >= 0) {
                 set(index, server)
@@ -124,11 +122,11 @@ class ServerManager @Inject constructor(
     fun deleteServer(serverUrl: String) {
 
         // Don't allow deleting the last server
-        if (serverSet.size <= 1) {
+        if (serverMap.size <= 1) {
             return
         }
 
-        val updatedList = serverSet.filter { it.serverUrl != serverUrl }
+        val updatedList = serverMap.keys.filter { it.serverUrl != serverUrl }
         saveServerList(updatedList)
 
         // If the selected server was deleted, select the first one
@@ -137,7 +135,7 @@ class ServerManager @Inject constructor(
         }
     }
 
-    fun checkAllServersHealth() {
+    fun checkAllServersHealth(callback: () -> Unit) {
         if (_isCheckingHealth.value) return
 
         healthCheckJob?.cancel()
@@ -145,45 +143,30 @@ class ServerManager @Inject constructor(
             _isCheckingHealth.value = true
 
             try {
-                val updatedServers = serverSet.map { server ->
+                serverMap.keys.forEach { server ->
                     checkServerHealthStatus(server)
-                }
-
-                withContext(Dispatchers.Main) {
-                    saveServerList(updatedServers)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error checking server health: ${e.message}")
             } finally {
                 _isCheckingHealth.value = false
+                callback()
             }
         }
     }
 
     fun checkServerHealth(serverUrl: String) {
         coroutineScope.launch {
-            val server = serverSet.find { it.serverUrl == serverUrl } ?: return@launch
-
+            val server = serverMap.keys.find { it.serverUrl == serverUrl } ?: return@launch
             try {
-                val updatedServer = checkServerHealthStatus(server)
-
-                val updatedList = serverSet.toMutableList().apply {
-                    val index = indexOfFirst { it.serverUrl == serverUrl }
-                    if (index >= 0) {
-                        set(index, updatedServer)
-                    }
-                }
-
-                withContext(Dispatchers.Main) {
-                    saveServerList(updatedList)
-                }
+                checkServerHealthStatus(server)
             } catch (e: Exception) {
                 Log.e(TAG, "Error checking server health: ${e.message}")
             }
         }
     }
 
-    private suspend fun checkServerHealthStatus(server: ServerEntry): ServerEntry {
+    private suspend fun checkServerHealthStatus(server: ServerEntry) {
         return try {
             val logging = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
@@ -212,13 +195,10 @@ class ServerManager @Inject constructor(
                 }
             }
 
-            server.copy(
-                isOnline = response,
-                lastChecked = System.currentTimeMillis()
-            )
+            serverMap[server] = ServerStatus(response, System.currentTimeMillis())
         } catch (e: Exception) {
             Log.e(TAG, "Error creating API client for health check: ${e.message}")
-            server.copy(
+            serverMap[server] = ServerStatus(
                 isOnline = false,
                 lastChecked = System.currentTimeMillis()
             )
@@ -227,11 +207,12 @@ class ServerManager @Inject constructor(
 
     private fun saveServerList(serverList: List<ServerEntry>) {
         val jsonString = Gson().toJson(serverList)
-        preferences.edit().putString(PREF_SERVER_LIST, jsonString).apply()
-        serverSet = serverList.toSet()
-        
+        preferences.edit { putString(PREF_SERVER_LIST, jsonString) }
+        serverMap.clear()
+        serverMap.putAll(serverList.associate { it to ServerStatus() })
+
         Log.d(TAG, "Saved ${serverList.size} servers to preferences")
-        
+
         // Make sure selected server is still valid after updating the list
         val selectedServerId = preferences.getString(PREF_SELECTED_SERVER_ID, null)
         if (selectedServerId != null && serverList.none { it.serverUrl == selectedServerId }) {
@@ -255,7 +236,7 @@ class ServerManager @Inject constructor(
         } else {
             emptyList()
         }
-        
+
         Log.d(TAG, "Loaded ${serverList.size} servers from preferences")
         return serverList
     }

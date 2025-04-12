@@ -3,6 +3,7 @@ package com.mycelium.myapplication.ui.recording
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mycelium.myapplication.data.model.ServerEntry
+import com.mycelium.myapplication.data.model.ServerStatus
 import com.mycelium.myapplication.data.repository.ServerManager
 import common.UIStateManager
 import common.WithUIStateManger
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ServerUiState(
-    val servers: List<ServerEntry> = emptyList(),
+    val servers: Map<ServerEntry, ServerStatus> = emptyMap(),
     val selectedServer: ServerEntry? = null,
     val isShowingDialog: Boolean = false,
     val newServerEntry: ServerEntry? = null,
@@ -32,9 +33,7 @@ class ServerViewModel @Inject constructor(
 ) : ViewModel(), WithUIStateManger<ServerUiState> {
 
     init {
-        viewModelScope.launch {
-            push(uiState.copy(servers = serverManager.serverSet.toList()))
-        }
+        updateList()
 
         viewModelScope.launch {
             serverManager.selectedServer.collectLatest { server ->
@@ -58,6 +57,10 @@ class ServerViewModel @Inject constructor(
                 checkAllServersHealth()
             }
         }
+    }
+
+    fun updateList() {
+        push(uiState.copy(servers = serverManager.serverMap))
     }
 
     fun showAddServerDialog() {
@@ -116,7 +119,7 @@ class ServerViewModel @Inject constructor(
         }
 
         if (state.isEditMode) {
-            val serverToUpdate = state.servers.find { it.serverUrl == state.editServerId } ?: return
+            val serverToUpdate = state.servers.keys.find { it.serverUrl == state.editServerId } ?: return
             val updatedServer = serverToUpdate.copy(
                 name = name,
                 runpodId = runpodId,
@@ -136,17 +139,13 @@ class ServerViewModel @Inject constructor(
     }
 
     fun deleteServer(server: ServerEntry) {
-        if (server.isCustom) {
-            serverManager.deleteServer(server.serverUrl)
-        }
-    }
-
-    fun checkServerHealth(serverId: String) {
-        serverManager.checkServerHealth(serverId)
+        serverManager.deleteServer(server.serverUrl)
     }
 
     fun checkAllServersHealth() {
-        serverManager.checkAllServersHealth()
+        serverManager.checkAllServersHealth({
+            updateList()
+        })
     }
 
     fun refreshHealthStatus() {

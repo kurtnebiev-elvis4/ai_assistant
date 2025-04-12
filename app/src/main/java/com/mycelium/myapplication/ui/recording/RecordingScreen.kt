@@ -60,6 +60,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.mycelium.ai_meet_assistant.BuildConfig
 import com.mycelium.myapplication.data.model.ChunkUploadQueue
 import com.mycelium.myapplication.data.model.RecordingSession
+import com.mycelium.myapplication.data.model.ServerStatus
 import com.mycelium.myapplication.data.recording.RecordState
 import common.provideUIState
 
@@ -193,7 +194,6 @@ fun RecordingScreen(
 
     Scaffold(
         topBar = {
-//            var expanded by remember { mutableStateOf(false) }
 
             Box(
                 modifier = Modifier
@@ -277,6 +277,7 @@ fun RecordingScreen(
                     serverUiState.selectedServer?.let { selectedServer ->
                         ServerIcon(
                             serverEntry = selectedServer,
+                            serverStatus = serverUiState.servers[selectedServer] ?: ServerStatus(),
                             isSelected = true,
                             modifier = Modifier.size(24.dp)
                         )
@@ -290,11 +291,12 @@ fun RecordingScreen(
                         Spacer(modifier = Modifier.width(4.dp))
 
                         // Server status indicator
+
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
                                 .background(
-                                    color = if (selectedServer.isOnline) {
+                                    color = if (serverUiState.servers[selectedServer]?.isOnline == true) {
                                         Color.Green
                                     } else {
                                         MaterialTheme.colorScheme.error

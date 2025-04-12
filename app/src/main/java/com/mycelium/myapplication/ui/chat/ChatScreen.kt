@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mycelium.myapplication.data.model.ChatMessage
 import com.mycelium.myapplication.data.model.ServerEntry
+import com.mycelium.myapplication.data.model.ServerStatus
 import com.mycelium.myapplication.ui.recording.ServerIcon
 import com.mycelium.myapplication.ui.recording.ServerUiState
 import com.mycelium.myapplication.ui.recording.ServerViewModel
@@ -99,6 +100,7 @@ fun ChatScreen(
             serverUiState.selectedServer?.let { selectedServer ->
                 ServerInfo(
                     server = selectedServer,
+                    serverStatus = serverUiState.servers[selectedServer] ?: ServerStatus(),
                     isConnected = chatUiState.isConnected,
                     onClick = showServerDialog
                 )
@@ -170,7 +172,7 @@ fun ChatScreen(
 }
 
 @Composable
-fun ServerInfo(server: ServerEntry, isConnected: Boolean, onClick: () -> Unit) {
+fun ServerInfo(server: ServerEntry, serverStatus: ServerStatus, isConnected: Boolean, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -181,6 +183,7 @@ fun ServerInfo(server: ServerEntry, isConnected: Boolean, onClick: () -> Unit) {
     ) {
         ServerIcon(
             serverEntry = server,
+            serverStatus = serverStatus,
             isSelected = true,
             modifier = Modifier.size(20.dp)
         )
