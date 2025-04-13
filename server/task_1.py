@@ -170,7 +170,7 @@ def extract_ready_items_from_transcript(file_id: str, transcript_path: str) -> l
     return ready_items
 
 
-def analyze_with_custom_prompt(file_id: str, transcript_path: str, prompt: str, label: str) -> str:
+def analyze_with_custom_prompt(file_id: str, transcript_path: str, label: str, prompt: str) -> str:
     """Runs a custom prompt on the transcript and saves the output."""
     print(f"[Prompt Label]: {label} [Prompt Used]:\n{prompt}")
 
