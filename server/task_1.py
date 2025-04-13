@@ -13,7 +13,7 @@ model_lock = threading.Lock()
 
 BASE_HEADER = (
     f"Current date: {CURRENT_DATE}\n"
-    # f"Language of the transcript: {{lang}}\n"
+    f"Language of the transcript: {{lang}}\n"
 )
 
 BASE_PROMPT_HEADER = (
