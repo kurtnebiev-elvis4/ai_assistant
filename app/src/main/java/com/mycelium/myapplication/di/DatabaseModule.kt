@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.mycelium.myapplication.data.db.ChunkUploadQueueDao
+import com.mycelium.myapplication.data.db.PromptDao
 import com.mycelium.myapplication.data.db.RecordingDatabase
 import com.mycelium.myapplication.data.db.RecordingDao
 import com.mycelium.myapplication.data.db.RecordingResultDao
@@ -46,6 +47,11 @@ object DatabaseModule {
     @Singleton
     fun provideRecordingResultDao(database: RecordingDatabase): RecordingResultDao =
         database.recordingResultDao()
+        
+    @Provides
+    @Singleton
+    fun providePromptDao(database: RecordingDatabase): PromptDao =
+        database.promptDao()
 
 //    @Provides
 //    @Singleton

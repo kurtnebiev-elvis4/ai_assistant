@@ -60,6 +60,7 @@ class ServerViewModel @Inject constructor(
     }
 
     fun updateList() {
+
         push(uiState.copy(servers = serverManager.serverMap))
     }
 

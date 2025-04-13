@@ -105,8 +105,8 @@ class WavRecorder @Inject constructor(
                         }
                     }
                     val bytesRead = audioRecord.read(buffer, 0, buffer.size)
-                    Log.e("!!!!AudioRecorder", "bytesRead: ${buffer.joinToString()}" )
-                    Log.e("!!!!AudioRecorder", "wakeLock.isHeld: ${wakeLock.isHeld}" )
+//                    Log.e("!!!!AudioRecorder", "bytesRead: ${buffer.joinToString()}" )
+//                    Log.e("!!!!AudioRecorder", "wakeLock.isHeld: ${wakeLock.isHeld}" )
                     if (bytesRead > 0) {
                         outputStream?.write(buffer, 0, bytesRead)
                         async {

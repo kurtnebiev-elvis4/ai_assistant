@@ -32,6 +32,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.mycelium.myapplication.data.repository.UploadChunkWorker
 import com.mycelium.myapplication.ui.chat.ChatScreen
+import com.mycelium.myapplication.ui.recording.NavigationEvent
+import com.mycelium.myapplication.ui.recording.PromptScreen
+import com.mycelium.myapplication.ui.recording.PromptViewModel
 import com.mycelium.myapplication.ui.recording.RecordListScreen
 import com.mycelium.myapplication.ui.recording.RecordingScreen
 import com.mycelium.myapplication.ui.recording.ResultScreen
@@ -94,7 +97,28 @@ fun MainScreen(requestAudioPermission: () -> Unit) {
                 composable("recording") {
                     RecordingScreen(
                         onRequestPermission = { requestAudioPermission() },
+                        action = {
+                            when (it) {
+                                is NavigationEvent.ToPromptScreen -> {
+                                    navController.navigate("prompts/${it.sessionId}")
+                                }
+                            }
+                        }
                     )
+                }
+                composable(
+                    route = "prompts/{recordingId}",
+                    arguments = listOf(
+                        navArgument("recordingId") { type = NavType.StringType }
+                    )) { backStackEntry ->
+                    PromptScreen(
+                        action = {
+                            when (it) {
+                                PromptViewModel.NavigationEvent.Finish -> {
+                                    navController.navigate("record_list")
+                                }
+                            }
+                        })
                 }
                 composable("record_list") {
                     RecordListScreen(

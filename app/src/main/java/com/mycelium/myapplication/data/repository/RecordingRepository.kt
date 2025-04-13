@@ -65,8 +65,12 @@ class RecordingRepository @Inject constructor(
         assistantApi.checkHealth()
     }
 
-    suspend fun finishSession(sessionId: String) {
-        assistantApi.sessionFinished(sessionId)
+    suspend fun finishSession(sessionId: String, prompts: Map<String, String>? = null) {
+        if (prompts != null && prompts.isNotEmpty()) {
+            assistantApi.sessionFinished(sessionId, PromptsRequest(prompts))
+        } else {
+            assistantApi.sessionFinished(sessionId)
+        }
     }
 
     suspend fun getProcessingStatus(fileId: String): Map<String, Boolean> =

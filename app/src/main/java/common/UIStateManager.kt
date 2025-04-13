@@ -1,7 +1,9 @@
 package common
 
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 
@@ -19,5 +21,21 @@ class UIStateManager<UIState> @Inject constructor(defaultState: UIState) {
 
     fun push(state: UIState) {
         _uiState.tryEmit(state)
+    }
+}
+
+interface WithActionManger<Action> {
+    val actionM: ActionManager<Action>
+}
+
+fun <Action> WithActionManger<Action>.provideAction() = actionM.action
+suspend fun <Action> WithActionManger<Action>.send(action: Action) = actionM.send(action)
+
+class ActionManager<Action> @Inject constructor() {
+    private val _actionEvent = MutableSharedFlow<Action>()
+    val action = _actionEvent.asSharedFlow()
+
+    suspend fun send(action: Action) {
+        _actionEvent.emit(action)
     }
 }

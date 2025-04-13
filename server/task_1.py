@@ -11,13 +11,17 @@ MAX_RESPONSE_TOKENS = 1024
 CURRENT_DATE = date.today().isoformat()
 model_lock = threading.Lock()
 
-BASE_PROMPT_HEADER = (
+BASE_HEADER = (
     f"Current date: {CURRENT_DATE}\n"
-    f"Language of the transcript: {{lang}}\n"
-    "Audience: Internal team.\n"
-    "Format: Paragraph style with clear, natural language.\n"
-    "Role: You are a highly skilled professional in summarizing and interpreting team discussions with precision and clarity.\n"
-    "You are an expert in organizational communication, team alignment, and extracting key insights from collaborative conversations.\n"
+    # f"Language of the transcript: {{lang}}\n"
+)
+
+BASE_PROMPT_HEADER = (
+        BASE_HEADER +
+        "Audience: Internal team.\n"
+        "Format: Paragraph style with clear, natural language.\n"
+        "Role: You are a highly skilled professional in summarizing and interpreting team discussions with precision and clarity.\n"
+        "You are an expert in organizational communication, team alignment, and extracting key insights from collaborative conversations.\n"
 )
 
 PROMPT_SUMMARIZE = (
@@ -164,3 +168,18 @@ def extract_ready_items_from_transcript(file_id: str, transcript_path: str) -> l
     with open(output_path, "w", encoding="utf-8") as out:
         out.write("\n".join(ready_items))
     return ready_items
+
+
+def analyze_with_custom_prompt(file_id: str, transcript_path: str, prompt: str, label: str) -> str:
+    """Runs a custom prompt on the transcript and saves the output."""
+    with open(transcript_path, "r", encoding="utf-8") as f:
+        whisper_text = f.read()
+    lang = detect(whisper_text)
+    final_prompt = BASE_HEADER.format(lang=lang.upper()) + prompt + "\nTranscript starts below:\n"
+
+    result = generate_text_chunks(final_prompt, whisper_text)
+
+    output_path = os.path.join(UPLOAD_DIR, f"{file_id}_{label}.txt")
+    with open(output_path, "w", encoding="utf-8") as out:
+        out.write(result)
+    return result

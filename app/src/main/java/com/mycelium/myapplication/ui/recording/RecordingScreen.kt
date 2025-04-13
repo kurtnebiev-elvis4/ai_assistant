@@ -1,7 +1,6 @@
 package com.mycelium.myapplication.ui.recording
 
-import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
+import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -31,10 +30,6 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,7 +39,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,6 +56,7 @@ import com.mycelium.myapplication.data.model.ChunkUploadQueue
 import com.mycelium.myapplication.data.model.RecordingSession
 import com.mycelium.myapplication.data.model.ServerStatus
 import com.mycelium.myapplication.data.recording.RecordState
+import common.provideAction
 import common.provideUIState
 
 interface RecordingScreenCallback {
@@ -109,35 +104,29 @@ fun RecordingScreenPreview() {
 @Composable
 fun RecordingScreen(
     viewModel: RecordingViewModel = hiltViewModel(),
-    listViewModel: RecordListViewModel = hiltViewModel(),
     serverViewModel: ServerViewModel = hiltViewModel(),
+    action: (NavigationEvent) -> Unit,
     onRequestPermission: () -> Unit,
 ) {
     val recordingState by viewModel.provideUIState().collectAsState()
-    val recordListState by listViewModel.provideUIState().collectAsState()
     val serverUiState by serverViewModel.provideUIState().collectAsState()
     val waveform by viewModel.waveform.collectAsState()
 
-    val context = LocalContext.current
-
-    val shareLauncher = rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
-    ) { listViewModel.resetShareIntent() }
-
-    // Handle the share intent if available
-    LaunchedEffect(recordListState.shareIntent) {
-        recordListState.shareIntent?.let { intent ->
-            shareLauncher.launch(Intent.createChooser(intent, "Share Recordings"))
+    LaunchedEffect(Unit) {
+        viewModel.provideAction().collect {
+            action(it)
         }
     }
+
+    val context = LocalContext.current
 
     // Show errors as a toast if needed
     LaunchedEffect(recordingState.error) {
         if (recordingState.error.isNotEmpty()) {
-            android.widget.Toast.makeText(
+            Toast.makeText(
                 context,
                 recordingState.error,
-                android.widget.Toast.LENGTH_SHORT
+                Toast.LENGTH_SHORT
             ).show()
         }
     }
@@ -169,6 +158,20 @@ fun RecordingScreen(
             )
         }
     }
+
+    // Show prompt selection dialog
+//    if (recordingState.isShowingPromptDialog) {
+//        PromptDialog(
+//            state = promptUiState,
+//            callback = promptViewModel,
+//            onDismiss = {
+//                // When closing prompt dialog, finish the session with selected prompts
+//                viewModel.hidePromptDialog()
+//                viewModel.finishSessionWithPrompts(promptViewModel.getSelectedPromptsMap())
+//                promptViewModel.clearSelections() // Clear selections for next time
+//            }
+//        )
+//    }
 
     RecordingScreen(
         recordingState,

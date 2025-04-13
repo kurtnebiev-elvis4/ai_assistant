@@ -3,6 +3,7 @@ package com.mycelium.myapplication.data.repository
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
@@ -35,6 +36,12 @@ interface AssistantApi {
         @Path("session_id") sessionId: String
     )
 
+    @POST("{session_id}/analyse")
+    suspend fun sessionFinished(
+        @Path("session_id") sessionId: String,
+        @Body promptsBody: PromptsRequest
+    )
+
     @GET("{session_id}/download")
     suspend fun downloadResult(
         @Path("session_id") sessionId: String,
@@ -60,4 +67,8 @@ data class ChunkUploadResponse(
     val session_id: String,
     val chunk_index: Int,
     val is_last_chunk: Boolean
+)
+
+data class PromptsRequest(
+    val prompts: Map<String, String>
 )

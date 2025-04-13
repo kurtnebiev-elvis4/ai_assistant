@@ -16,9 +16,12 @@ import com.mycelium.myapplication.data.recording.RecordInfo
 import com.mycelium.myapplication.data.recording.RecordState
 import com.mycelium.myapplication.data.recording.WavRecorder
 import com.mycelium.myapplication.data.repository.RecordingRepository
+import common.ActionManager
 import common.UIStateManager
+import common.WithActionManger
 import common.WithUIStateManger
 import common.push
+import common.send
 import common.uiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,15 +37,21 @@ data class RecordingState(
     val micState: RecordState = RecordState.NONE,
     val time: String = "",
     val error: String = "",
-    val isMicGranted: Boolean = false
+    val isMicGranted: Boolean = false,
+    val isShowingPromptDialog: Boolean = false
 )
+
+sealed class NavigationEvent {
+    data class ToPromptScreen(val sessionId: String) : NavigationEvent()
+}
 
 @HiltViewModel
 class RecordingViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: RecordingRepository,
-    override val uiStateM: UIStateManager<RecordingState>
-) : ViewModel(), WithUIStateManger<RecordingState>, RecordingScreenCallback {
+    override val uiStateM: UIStateManager<RecordingState>,
+    override val actionM: ActionManager<NavigationEvent>
+) : ViewModel(), WithUIStateManger<RecordingState>, WithActionManger<NavigationEvent>, RecordingScreenCallback {
 
     private val _waveform = MutableStateFlow<List<Short>>(emptyList())
     val waveform: StateFlow<List<Short>> = _waveform.asStateFlow()
@@ -174,16 +183,7 @@ class RecordingViewModel @Inject constructor(
                         )
                     )
                 }
-                try {
-                    repository.finishSession(session.id)
-                } catch (e: Exception) {
-                    push(
-                        uiState.copy(
-                            audioRecorder?.state() ?: RecordState.NONE,
-                            error = e.message ?: "Failed to finish session"
-                        )
-                    )
-                }
+                send(NavigationEvent.ToPromptScreen(session.id))
             }
         }
     }

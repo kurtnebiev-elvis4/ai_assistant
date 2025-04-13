@@ -32,21 +32,23 @@ pipe = pipeline(
 
 model_lock = threading.Lock()
 
-def transcribe_audio(input_path: str, output_path: str):
+
+def transcribe_audio(input_path: str, output_path: str, output_path_t: str):
     try:
         with model_lock:
             result = pipe(input_path, return_timestamps=True)
+
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(result["text"])
-            # Save transcription with timestamps in a separate file
-            timestamped_output_path = output_path.replace(".txt", "_timestamps.txt")
-            with open(timestamped_output_path, "w", encoding="utf-8") as ts_f:
-                chunks = result.get("chunks")
-                if chunks:
-                    for chunk in chunks:
-                        start, end = chunk["timestamp"]
-                        text = chunk["text"]
-                        ts_f.write(f"[{start:.2f} - {end:.2f}]: {text}\n")
+
+        # Save transcription with timestamps in a separate file
+        with open(output_path_t, "w", encoding="utf-8") as ts_f:
+            chunks = result["chunks"]
+            if chunks:
+                for chunk in chunks:
+                    start, end = chunk["timestamp"]
+                    text = chunk["text"]
+                    ts_f.write(f"[{start:.2f} - {end:.2f}]: {text}\n")
             print(f"Transcription finished")
     except Exception as e:
         print(f"Transcription failed: {e}")

@@ -2,7 +2,8 @@ import asyncio
 import os
 import soundfile as sf
 import uuid
-from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect, WebSocketException
+from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect, \
+    WebSocketException
 from fastapi.responses import FileResponse, JSONResponse
 from chat_bot import chat_with_deepseek
 
@@ -86,18 +87,27 @@ async def upload_chunk(
 
 
 @app.post("/{session_id}/analyse")
-async def start_analysis(session_id: str, background_tasks: BackgroundTasks = None):
-    background_tasks.add_task(run_full_analysis_pipeline, session_id)
+async def start_analysis(session_id: str, background_tasks: BackgroundTasks = None, prompts: dict = None):
+    if prompts:
+        prompts_path = os.path.join(UPLOAD_DIR, f"{session_id}_custom_prompts.json")
+        with open(prompts_path, "w", encoding="utf-8") as f:
+            import json
+            json.dump(prompts, f, ensure_ascii=False, indent=2)
+
+    background_tasks.add_task(run_full_analysis_pipeline, session_id,
+                              {"custom_" + k: v for k, v in prompts.items()} if prompts else None)
     return {"message": "session finished", "session_id": session_id}
 
 
 @app.get("/{session_id}/download")
 async def download_result(session_id: str, type: str = "transcript"):
     if type not in RESULT_TYPES:
-        raise HTTPException(status_code=400, detail="Unknown result type.")
-
-    suffix = RESULT_TYPES[type]
-    file_path = os.path.join(UPLOAD_DIR, f"{session_id}{suffix}.txt")
+        file_path = os.path.join(UPLOAD_DIR, f"{session_id}_custom_{type}.txt")
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=400, detail="Unknown result type.")
+    else:
+        suffix = RESULT_TYPES[type]
+        file_path = os.path.join(UPLOAD_DIR, f"{session_id}{suffix}.txt")
 
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Requested result not found yet. Try again later.")
@@ -115,7 +125,14 @@ async def get_status(session_id: str):
         file_path = os.path.join(UPLOAD_DIR, f"{session_id}{suffix}.txt")
         status[result_type] = os.path.exists(file_path)
 
-    status["ready"] = all(status[result_type] for result_type in result_types)
+    custom_prompts_path = os.path.join(UPLOAD_DIR, f"{session_id}_custom_prompts.json")
+    if os.path.exists(custom_prompts_path):
+        import json
+        with open(custom_prompts_path, "r", encoding="utf-8") as f:
+            prompts = json.load(f)
+        for label in prompts.keys():
+            prompt_file_path = os.path.join(UPLOAD_DIR, f"{session_id}_custom_{label}.txt")
+            status[f"custom_{label}"] = os.path.exists(prompt_file_path)
 
     return status
 

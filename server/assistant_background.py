@@ -2,7 +2,8 @@ import os
 
 from keys import UPLOAD_DIR, allowed_extensions
 from task_0 import transcribe_audio
-from task_1 import summarize_transcript, extract_decisions_from_transcript, extract_tasks_from_transcript
+from task_1 import (summarize_transcript, extract_decisions_from_transcript, extract_tasks_from_transcript,
+                    analyze_with_custom_prompt)
 
 
 def chunk_file(session_id: str, chunk_index: int, file_extension: str):
@@ -19,12 +20,13 @@ def run_transcript_chunk_pipeline(session_id: str, chunk_index: int):
             audio_path = audio_path_candidate
             break
     transcript_path = chunk_file(session_id, chunk_index, ".txt")
+    transcript_path_t = chunk_file(session_id, chunk_index, ".timestamp.txt")
     print("Step 0 complete: Start analysis")
     # 1. Transcribe audio to text
-    transcribe_audio(audio_path, transcript_path)
+    transcribe_audio(audio_path, transcript_path, transcript_path_t)
 
 
-def run_full_analysis_pipeline(session_id: str):
+def run_full_analysis_pipeline(session_id: str, prompts: dict = None):
     session_dir = os.path.join(UPLOAD_DIR, session_id)
     lock_path = os.path.join(UPLOAD_DIR, f"{session_id}_full_analysis.lock")
 
@@ -65,6 +67,11 @@ def run_full_analysis_pipeline(session_id: str):
         # 4. Identify action items / tasks
         extract_tasks_from_transcript(session_id, transcript_path)
         print("Step 4 complete: Tasks extracted")
+
+        if prompts:
+            for label, prompt in prompts.items():
+                analyze_with_custom_prompt(session_id, transcript_path, label, prompt)
+                print(f"Custom analysis complete: {label}")
     finally:
         # Удаляем lock-файл
         if os.path.exists(lock_path):
