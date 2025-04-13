@@ -6,12 +6,18 @@ from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException, W
     WebSocketException
 from fastapi.responses import FileResponse, JSONResponse
 from chat_bot import chat_with_deepseek
+from pydantic import BaseModel
 
 from assistant_background import (run_full_analysis_pipeline, chunk_file,
                                   run_transcript_chunk_pipeline)
 from keys import UPLOAD_DIR, allowed_extensions, RESULT_TYPES
 
 app = FastAPI()
+
+
+class Analyse(BaseModel):
+    prompts: dict | None = None
+
 
 
 @app.get("/health")
@@ -87,7 +93,8 @@ async def upload_chunk(
 
 
 @app.post("/{session_id}/analyse")
-async def start_analysis(session_id: str, background_tasks: BackgroundTasks = None, prompts: dict = None):
+async def start_analysis(session_id: str, background_tasks: BackgroundTasks = None, body: Analyse = None):
+    prompts = body.prompts
     if prompts:
         prompts_path = os.path.join(UPLOAD_DIR, f"{session_id}_custom_prompts.json")
         with open(prompts_path, "w", encoding="utf-8") as f:
