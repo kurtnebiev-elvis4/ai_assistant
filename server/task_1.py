@@ -1,5 +1,5 @@
 import os
-from ai_model import model, tokenizer
+from ai_model_2 import model, tokenizer
 from langdetect import detect
 import torch
 import threading

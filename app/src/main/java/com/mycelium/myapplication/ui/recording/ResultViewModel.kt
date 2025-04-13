@@ -44,7 +44,7 @@ class ResultViewModel @Inject constructor(
                 }
 
 
-                if (statusResponse.filter { it.value == true }.size < 2) {
+                if (statusResponse.filter { it.value == true }.size > 2) {
                     push(
                         uiState.copy(
                             isLoading = false, isProcessingComplete = true

@@ -1,4 +1,4 @@
-from ai_model import model, tokenizer
+from ai_model_2 import model, tokenizer
 import torch
 
 # Истории диалогов по пользователям
