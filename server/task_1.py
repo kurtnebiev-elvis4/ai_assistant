@@ -1,5 +1,5 @@
 import os
-from ai_model_2 import model, tokenizer
+from qwen.qwq_32b import model, tokenizer
 from langdetect import detect
 import torch
 import threading

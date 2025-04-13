@@ -5,8 +5,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 gc.collect()
 torch.cuda.empty_cache()
 
-# Загрузка Qwen 14B (Distill)
-model_id = "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"
+model_id = "Qwen/QwQ-32B"
 bnb_config = BitsAndBytesConfig(
     # load_in_4bit=True,
     # bnb_4bit_use_double_quant=True,
