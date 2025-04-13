@@ -42,12 +42,13 @@ class ResultViewModel @Inject constructor(
                 } else {
                     repository.finishSession(recordingId)
                 }
-                if (statusResponse.all { it.value }) {
+
+
+                if (statusResponse.filter { it.value == true }.size < 2) {
                     push(
                         uiState.copy(
                             isLoading = false, isProcessingComplete = true
                         )
-
                     )
                 } else {
                     push(

@@ -139,7 +139,7 @@ async def get_status(session_id: str):
             prompts = json.load(f)
         for label in prompts.keys():
             prompt_file_path = os.path.join(UPLOAD_DIR, f"{session_id}_custom_{label}.txt")
-            status[f"custom_{label}"] = os.path.exists(prompt_file_path)
+            status[label] = os.path.exists(prompt_file_path)
 
     return status
 
