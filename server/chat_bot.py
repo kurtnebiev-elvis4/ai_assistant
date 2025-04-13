@@ -4,9 +4,13 @@ import torch
 # Истории диалогов по пользователям
 user_histories = {}
 
+
 def chat_with_deepseek(prompt, user_id, max_new_tokens=512):
     if user_id not in user_histories:
-        user_histories[user_id] = []
+        user_histories[user_id] = [
+            {"role": "system",
+             "content": "Ты — дружелюбный и полезный ассистент. Отвечай понятно, вежливо и по существу. Если не знаешь ответа — честно скажи об этом."}
+        ]
 
     history = user_histories[user_id]
     history.append({"role": "user", "content": prompt})

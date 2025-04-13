@@ -172,6 +172,8 @@ def extract_ready_items_from_transcript(file_id: str, transcript_path: str) -> l
 
 def analyze_with_custom_prompt(file_id: str, transcript_path: str, prompt: str, label: str) -> str:
     """Runs a custom prompt on the transcript and saves the output."""
+    print(f"[Prompt Label]: {label} [Prompt Used]:\n{prompt}")
+
     with open(transcript_path, "r", encoding="utf-8") as f:
         whisper_text = f.read()
     lang = detect(whisper_text)
