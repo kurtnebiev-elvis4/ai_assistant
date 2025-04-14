@@ -94,7 +94,7 @@ async def upload_chunk(
 
 @app.post("/{session_id}/analyse")
 async def start_analysis(session_id: str, background_tasks: BackgroundTasks = None, body: Analyse = None):
-    prompts = body.prompts
+    prompts = body.prompts if body else None
     if prompts:
         prompts_path = os.path.join(UPLOAD_DIR, f"{session_id}_custom_prompts.json")
         with open(prompts_path, "w", encoding="utf-8") as f:
