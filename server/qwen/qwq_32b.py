@@ -21,4 +21,5 @@ model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.float16,
     trust_remote_code=True
 )
+model = torch.compile(model)
 model.eval()
