@@ -46,7 +46,10 @@ def run_full_analysis_pipeline(session_id: str, prompts: dict = None):
             print("No chunks found for this session.")
             return
 
-        chunk_files = sorted(f for f in os.listdir(session_dir) if f.endswith(".txt"))
+        chunk_files = sorted(
+            f for f in os.listdir(session_dir)
+            if f.endswith(".txt") and not f.endswith(".timestamp.txt")
+        )
         if not chunk_files:
             print("No transcribed chunks available.")
             return
@@ -55,6 +58,16 @@ def run_full_analysis_pipeline(session_id: str, prompts: dict = None):
         transcript_path = os.path.join(UPLOAD_DIR, f"{session_id}.txt")
         with open(transcript_path, "w", encoding="utf-8") as outfile:
             for chunk_file in chunk_files:
+                with open(os.path.join(session_dir, chunk_file), "r", encoding="utf-8") as infile:
+                    outfile.write(infile.read() + "\n")
+
+        # Merge all timestamp transcripts into a single timestamp file
+        timestamp_path_t = os.path.join(UPLOAD_DIR, f"{session_id}.timestamp.txt")
+        with open(timestamp_path_t, "w", encoding="utf-8") as outfile:
+            for chunk_file in sorted(
+                f for f in os.listdir(session_dir)
+                if f.endswith(".timestamp.txt")
+            ):
                 with open(os.path.join(session_dir, chunk_file), "r", encoding="utf-8") as infile:
                     outfile.write(infile.read() + "\n")
 
