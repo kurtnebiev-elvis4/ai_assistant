@@ -1,5 +1,5 @@
 import os
-from qwen.qwq_32b import model, tokenizer
+from deepseek.deepseek_r1_32b import model, tokenizer
 from qwen.prompts import PREFIX, PROMPT_SUMMARIZE, PROMPT_DECISIONS, PROMPT_TASKS, PROMPT_READY, BASE_HEADER
 from langdetect import detect
 import torch

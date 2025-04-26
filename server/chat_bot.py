@@ -1,4 +1,4 @@
-from qwen.qwq_32b import model, tokenizer
+from deepseek.deepseek_r1_32b import model, tokenizer
 import torch
 
 # Истории диалогов по пользователям

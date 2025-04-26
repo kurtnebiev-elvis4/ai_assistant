@@ -2,6 +2,7 @@ import gc
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
+print("start loading model deepseek-ai/DeepSeek-R1-Distill-Qwen-32B")
 gc.collect()
 torch.cuda.empty_cache()
 
@@ -18,6 +19,9 @@ model = AutoModelForCausalLM.from_pretrained(
     model_id,
     device_map="auto",
     quantization_config=bnb_config,
+    torch_dtype=torch.float16,
     trust_remote_code=True
 )
+model = torch.compile(model)
 model.eval()
+print("end loading model deepseek-ai/DeepSeek-R1-Distill-Qwen-32B")

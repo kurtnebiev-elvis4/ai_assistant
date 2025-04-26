@@ -2,6 +2,7 @@ import gc
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
+print("start loading model Qwen/QwQ-32B")
 gc.collect()
 torch.cuda.empty_cache()
 
@@ -23,3 +24,4 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 model = torch.compile(model)
 model.eval()
+print("end loading model Qwen/QwQ-32B")
