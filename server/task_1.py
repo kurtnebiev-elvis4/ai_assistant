@@ -29,7 +29,7 @@ def generate_text_chunks(prompt: str, text: str) -> str:
     current_len = prompt_len
 
     for token in transcript_tokens:
-        if current_len + 1 > max_len - MAX_RESPONSE_TOKENS:
+        if current_len + 1 > (max_len - MAX_RESPONSE_TOKENS)/2:
             chunks.append(current_chunk)
             current_chunk = [token]
             current_len = prompt_len + 1
