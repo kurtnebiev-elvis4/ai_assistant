@@ -22,6 +22,6 @@ model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.float16,
     trust_remote_code=True
 )
-model = torch.compile(model)
+# model = torch.compile(model)
 model.eval()
 print("end loading model deepseek-ai/DeepSeek-R1-Distill-Qwen-32B")

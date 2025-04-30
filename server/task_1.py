@@ -2,6 +2,7 @@ import os
 from deepseek.deepseek_r1_32b import model, tokenizer
 from qwen.prompts import PREFIX, PROMPT_SUMMARIZE, PROMPT_DECISIONS, PROMPT_TASKS, PROMPT_READY, BASE_HEADER
 from langdetect import detect
+import gc
 import torch
 import threading
 
@@ -46,8 +47,10 @@ def generate_text_chunks(prompt: str, text: str) -> str:
         input_ids = torch.cat([inputs, chunk_input], dim=1)
         chunk_attention_mask = torch.ones_like(chunk_input)
         attention_mask = torch.cat([prompt_attention_mask, chunk_attention_mask], dim=1)
-        with model_lock:
+        with torch.no_grad(), model_lock:
             max_output_tokens = min(MAX_RESPONSE_TOKENS, max_len - input_ids.shape[1])
+            gc.collect()
+            torch.cuda.empty_cache()
             outputs = model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
